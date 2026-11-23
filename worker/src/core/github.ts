@@ -1,5 +1,5 @@
 /** Triggers the pipeline workflow (workflow_dispatch) so the dashboard's Run buttons work. */
-export const STAGES = ["research", "create", "publish", "analytics", "supervisor"] as const;
+export const STAGES = ["research", "create", "publish", "analytics", "tokens", "supervisor"] as const;
 export type StageName = (typeof STAGES)[number];
 
 export async function dispatchStage(repo: string, token: string, stage: StageName, ref = "main") {

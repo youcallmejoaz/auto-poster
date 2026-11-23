@@ -60,10 +60,28 @@ cd dashboard && DEMO_MODE=true pnpm dev   # http://localhost:3000, sample data
 | Supabase project | database + video/media storage | free tier is fine to start |
 | ElevenLabs key | voiceover + word-by-word captions | optional |
 | Apify token | trend research | optional; you can import a CSV with the CLI instead |
-| IG Business/Creator account + Meta app token | Reels publishing + insights | the long-lived token lasts ~60 days, so re-paste it in Settings |
-| TikTok developer app | posting + stats | **apply for the audit now (takes weeks)**; until then posts are private |
+| IG Business/Creator account + Meta app (Instagram login) | Reels publishing + insights | connect once; refreshed automatically |
+| TikTok developer app | posting + stats | connect once; refreshed automatically. **Apply for the audit now (takes weeks)**; until then posts are private |
 | Branch/AppsFlyer/App Store campaign links | installs per video | use it as *Download link* and import installs on Analytics |
 | App screen recordings | the App demo template | vertical, 10–40s, no personal data on screen |
+
+## Connecting TikTok and Instagram (tokens refresh automatically)
+
+Use **Settings → Connected accounts → Connect** instead of pasting tokens. After that:
+
+| | Token life | What the pipeline does |
+|---|---|---|
+| TikTok | access 24h, refresh 365 days (renewed on every refresh) | The `tokens` stage runs every 6h and refreshes when < 12h are left. Publish and analytics also refresh just in time if the token is about to expire. |
+| Instagram (Instagram Login) | 60 days | Refreshed when < 30 days are left. |
+| Instagram (pasted Facebook token, `EAA…`) | 60 days | Converted once into a **Page token that never expires** (needs the Facebook app ID/secret). |
+
+Refreshed tokens are re-encrypted and saved to Settings. The supervisor alerts you if a refresh fails, a token is about to expire, or the TikTok refresh token itself is within 14 days of expiry (reconnect once a year).
+
+One-time setup per platform:
+1. **TikTok:** at developers.tiktok.com, create an app with *Login Kit* + *Content Posting API*. Scopes: `user.info.basic`, `video.publish`, `video.list`. Add the redirect URI shown in the dashboard (`https://<dashboard>/api/oauth/tiktok/callback`). Paste the client key and secret in Settings → TikTok, then click **Connect TikTok**.
+2. **Instagram:** at developers.facebook.com, create an app → Instagram → *API setup with Instagram login*. Add the redirect URI (`https://<dashboard>/api/oauth/instagram/callback`). Paste the Instagram app ID and secret in Settings → Instagram, then click **Connect Instagram**. The account must be a Business or Creator account.
+
+Set *Dashboard public URL* first, because the redirect URI must match exactly.
 
 ## Stages (run by GitHub Actions)
 
@@ -73,6 +91,7 @@ cd dashboard && DEMO_MODE=true pnpm dev   # http://localhost:3000, sample data
 | `create` | daily | Turns a brief into a script, voiceover and render. The AI critic scores the frames and the stage revises until the video passes (max N loops). Videos land in Review. |
 | `publish` | hourly | Posts approved videos inside your posting times, under the daily cap. |
 | `analytics` | 6-hourly | Pulls metrics and installs, scores videos, and queues recut/variant briefs for the winners. |
+| `tokens` | every 6h | Refreshes TikTok/Instagram tokens close to expiry and stores them encrypted. |
 | `supervisor` | hourly | Checks stage SLAs, failures, spend and backlog. It retries a failed stage once and sends alerts to Slack/Discord. |
 
 ## CLI (optional)
@@ -85,7 +104,6 @@ pnpm --filter worker stage list review
 
 ## Honest limitations
 
-- **Tokens expire.** Instagram tokens last about 60 days, and TikTok access tokens expire daily unless refreshed. When one expires, the supervisor alerts you and you re-paste it in Settings. Automatic refresh isn't built yet.
 - **Scraping:** Apify actors scrape public data, so treat research as best-effort.
 - **No music:** trending sounds can't be added through the posting APIs.
 - **Single admin login.** The dashboard has one password, not per-user accounts.

@@ -31,8 +31,22 @@ const Env = z.object({
   IG_USER_ID: z.string().optional(),
   IG_ACCESS_TOKEN: z.string().optional(),
   META_GRAPH_VERSION: z.string().default("v23.0"),
+  /** Instagram Login app (Meta dashboard → Instagram → API setup with Instagram login). */
+  IG_APP_ID: z.string().optional(),
+  IG_APP_SECRET: z.string().optional(),
+  /** Facebook Login app; only used to convert a Facebook user token into a non-expiring Page token. */
+  META_APP_ID: z.string().optional(),
+  META_APP_SECRET: z.string().optional(),
+  /** Managed by the token stage (ISO timestamps / token kind). */
+  IG_TOKEN_EXPIRES_AT: z.string().optional(),
+  IG_TOKEN_KIND: z.string().optional(), // instagram | facebook_page | facebook_user
 
   TIKTOK_ACCESS_TOKEN: z.string().optional(),
+  TIKTOK_CLIENT_KEY: z.string().optional(),
+  TIKTOK_CLIENT_SECRET: z.string().optional(),
+  TIKTOK_REFRESH_TOKEN: z.string().optional(),
+  TIKTOK_TOKEN_EXPIRES_AT: z.string().optional(),
+  TIKTOK_REFRESH_EXPIRES_AT: z.string().optional(),
   /** Unaudited TikTok apps can only post SELF_ONLY. Switch to PUBLIC_TO_EVERYONE after audit. */
   TIKTOK_PRIVACY: z.string().default("SELF_ONLY"),
 

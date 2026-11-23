@@ -12,6 +12,8 @@ export interface SettingDef {
   secret?: boolean;
   help?: string;
   type?: "text" | "textarea" | "number" | "bool";
+  /** Written by the pipeline (e.g. refreshed tokens, expiry times); not shown as an editable field. */
+  internal?: boolean;
   placeholder?: string;
 }
 
@@ -29,9 +31,20 @@ export const SETTINGS: SettingDef[] = [
   { key: "LLM_MODEL_JUDGE", label: "Judge / strategy model", group: "AI", placeholder: "claude-opus-5-5" },
   { key: "ELEVENLABS_API_KEY", label: "ElevenLabs API key", group: "Voice", secret: true, help: "Optional. Without it videos have no voiceover or captions." },
   { key: "ELEVENLABS_VOICE_ID", label: "Voice ID", group: "Voice", placeholder: "21m00Tcm4TlvDq8ikWAM" },
-  { key: "IG_USER_ID", label: "Instagram user ID", group: "Instagram", help: "IG Business/Creator account id from the Graph API." },
-  { key: "IG_ACCESS_TOKEN", label: "Instagram access token", group: "Instagram", secret: true, help: "Long-lived token with instagram_content_publish + insights. Expires after ~60 days." },
-  { key: "TIKTOK_ACCESS_TOKEN", label: "TikTok access token", group: "TikTok", secret: true, help: "Needs video.publish + video.list scopes. Expires every 24h unless refreshed." },
+  { key: "IG_APP_ID", label: "Instagram app ID", group: "Instagram", help: "Meta developer dashboard → your app → Instagram → API setup with Instagram login. Enables the Connect button and auto-refresh." },
+  { key: "IG_APP_SECRET", label: "Instagram app secret", group: "Instagram", secret: true },
+  { key: "IG_USER_ID", label: "Instagram account ID", group: "Instagram", help: "Filled in automatically when you use Connect." },
+  { key: "IG_ACCESS_TOKEN", label: "Instagram access token", group: "Instagram", secret: true, help: "Filled in by Connect, or paste one. Long-lived tokens are refreshed automatically before their 60 days run out." },
+  { key: "META_APP_ID", label: "Facebook app ID (optional)", group: "Instagram", help: "Only if you paste a Facebook Login token (starts with EAA): it gets converted once into a Page token that doesn't expire." },
+  { key: "META_APP_SECRET", label: "Facebook app secret (optional)", group: "Instagram", secret: true },
+  { key: "IG_TOKEN_EXPIRES_AT", label: "Instagram token expiry", group: "Instagram", internal: true },
+  { key: "IG_TOKEN_KIND", label: "Instagram token kind", group: "Instagram", internal: true },
+  { key: "TIKTOK_CLIENT_KEY", label: "TikTok client key", group: "TikTok", help: "developers.tiktok.com → your app. Enables the Connect button and auto-refresh." },
+  { key: "TIKTOK_CLIENT_SECRET", label: "TikTok client secret", group: "TikTok", secret: true },
+  { key: "TIKTOK_ACCESS_TOKEN", label: "TikTok access token", group: "TikTok", secret: true, help: "Filled in by Connect. Expires every 24h and is refreshed automatically." },
+  { key: "TIKTOK_REFRESH_TOKEN", label: "TikTok refresh token", group: "TikTok", secret: true, help: "Filled in by Connect (valid 365 days, renewed on each refresh)." },
+  { key: "TIKTOK_TOKEN_EXPIRES_AT", label: "TikTok token expiry", group: "TikTok", internal: true },
+  { key: "TIKTOK_REFRESH_EXPIRES_AT", label: "TikTok refresh token expiry", group: "TikTok", internal: true },
   { key: "TIKTOK_PRIVACY", label: "TikTok privacy", group: "TikTok", placeholder: "SELF_ONLY", help: "Keep SELF_ONLY until TikTok approves your app audit, then PUBLIC_TO_EVERYONE." },
   { key: "POST_SLOTS_UTC", label: "Posting times (UTC)", group: "Publishing", placeholder: "15:00,20:00" },
   { key: "DAILY_POST_CAP", label: "Max videos per day", group: "Publishing", type: "number", placeholder: "2" },
@@ -92,3 +105,13 @@ export function settingsToEnv(rows: StoredSetting[], encKey: string | undefined)
 }
 
 export const maskSecret = (s: string) => (s.length <= 8 ? "••••" : `${s.slice(0, 4)}••••${s.slice(-4)}`);
+
+/** Encrypts (when secret) and stores one setting. Used by the token stage and OAuth callbacks. */
+export async function storeSetting(repo: { setSetting(s: StoredSetting): Promise<void> }, encKey: string | undefined, key: string, value: string) {
+  const def = SETTINGS.find((d) => d.key === key);
+  if (!def) throw new Error(`unknown setting ${key}`);
+  if (def.secret) {
+    if (!encKey) throw new Error("SETTINGS_ENCRYPTION_KEY is required to store tokens");
+    await repo.setSetting({ key, value: encryptSecret(value, encKey), is_secret: true });
+  } else await repo.setSetting({ key, value, is_secret: false });
+}

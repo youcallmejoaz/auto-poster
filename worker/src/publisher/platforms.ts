@@ -24,9 +24,10 @@ export interface Publisher {
  */
 export class InstagramPublisher implements Publisher {
   platform = "instagram" as const;
-  constructor(private userId: string, private token: string, private version = "v23.0") {}
+  /** host: graph.instagram.com for Instagram Login tokens, graph.facebook.com for Facebook Login/Page tokens. */
+  constructor(private userId: string, private token: string, private version = "v23.0", private host = "https://graph.facebook.com") {}
   private url(path: string, params: Record<string, string> = {}) {
-    const u = new URL(`https://graph.facebook.com/${this.version}/${path}`);
+    const u = new URL(`${this.host}/${this.version}/${path}`);
     for (const [k, v] of Object.entries({ ...params, access_token: this.token })) u.searchParams.set(k, v);
     return u.toString();
   }

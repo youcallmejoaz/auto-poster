@@ -201,7 +201,7 @@ describe("supervisor", () => {
     const { ctx, repo } = makeCtx();
     const logs: string[] = [];
     ctx.log = (...m) => logs.push(m.join(" "));
-    for (const s of ["research", "publish", "analytics"]) await repo.finishRun((await repo.startRun(s)).id!, { status: "ok" });
+    for (const s of ["research", "publish", "analytics", "tokens"]) await repo.finishRun((await repo.startRun(s)).id!, { status: "ok" });
     await repo.finishRun((await repo.startRun("create")).id!, { status: "error", error: "boom" });
     const retried: string[] = [];
     await runSupervisor(ctx, async (s) => { retried.push(s); });

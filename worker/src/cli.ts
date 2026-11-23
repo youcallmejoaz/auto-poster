@@ -13,6 +13,7 @@ import { DryRunPublisher, InstagramPublisher, TikTokPublisher, type Publisher } 
 import { runPublish } from "./publisher/publish";
 import { DbAttribution, FileAttribution, runAnalytics } from "./analytics/analytics";
 import { runSupervisor } from "./supervisor/supervisor";
+import { ensureFreshTikTok, igGraphHost, runTokens } from "./publisher/tokens";
 
 const USAGE = `Usage: pnpm stage <command> [flags]
 
@@ -21,6 +22,7 @@ Pipeline stages (run on a schedule):
   create                      Turn open briefs into rendered videos (to review queue)
   publish [--force]           Post approved videos (inside posting slots)
   analytics                   Pull metrics, score videos, queue feedback briefs
+  tokens [--force]            Refresh TikTok/Instagram tokens that are close to expiry
   supervisor                  Health/SLA/budget checks, retry failed stages, alert
 
 Library management:
@@ -47,7 +49,7 @@ function makeRepo(cfg: Config, dry: boolean): Repo {
 function publishers(ctx: Ctx): Publisher[] {
   const { cfg } = ctx;
   const out: Publisher[] = [];
-  if (cfg.IG_USER_ID && cfg.IG_ACCESS_TOKEN) out.push(ctx.dryRun ? new DryRunPublisher("instagram", ctx.log) : new InstagramPublisher(cfg.IG_USER_ID, cfg.IG_ACCESS_TOKEN, cfg.META_GRAPH_VERSION));
+  if (cfg.IG_USER_ID && cfg.IG_ACCESS_TOKEN) out.push(ctx.dryRun ? new DryRunPublisher("instagram", ctx.log) : new InstagramPublisher(cfg.IG_USER_ID, cfg.IG_ACCESS_TOKEN, cfg.META_GRAPH_VERSION, igGraphHost(cfg.IG_ACCESS_TOKEN, cfg.IG_TOKEN_KIND)));
   if (cfg.TIKTOK_ACCESS_TOKEN) out.push(ctx.dryRun ? new DryRunPublisher("tiktok", ctx.log) : new TikTokPublisher(cfg.TIKTOK_ACCESS_TOKEN, cfg.TIKTOK_PRIVACY));
   if (ctx.dryRun && !out.length) out.push(new DryRunPublisher("tiktok", ctx.log), new DryRunPublisher("instagram", ctx.log));
   return out;
@@ -66,9 +68,13 @@ async function runNamed(ctx: Ctx, stage: string): Promise<unknown> {
     }
     case "create":
       return runCreate(ctx, { tts: cfg.ELEVENLABS_API_KEY ? new ElevenLabsTts(cfg.ELEVENLABS_API_KEY, cfg.ELEVENLABS_VOICE_ID) : new NoTts(), renderer: remotionRenderer });
+    case "tokens":
+      return runTokens(ctx, { force: process.argv.includes("--force") });
     case "publish":
+      await ensureFreshTikTok(ctx);
       return runPublish(ctx, publishers(ctx), { force: process.argv.includes("--force") });
     case "analytics":
+      await ensureFreshTikTok(ctx);
       return runAnalytics(ctx, publishers(ctx), cfg.INSTALLS_FILE && fs.existsSync(cfg.INSTALLS_FILE) ? new FileAttribution(cfg.INSTALLS_FILE) : await DbAttribution.load(ctx.repo));
     case "supervisor":
       return runSupervisor(ctx, (s) => runNamed(ctx, s));

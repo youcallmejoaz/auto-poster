@@ -1,8 +1,9 @@
 import { http, runStage, type Ctx } from "../core/context";
+import { tokenWarnings } from "../publisher/tokens";
 import type { JobRun, Video } from "../core/types";
 
 /** Max hours between successful runs before the stage counts as stalled. */
-export const EXPECTED_CADENCE_H: Record<string, number> = { research: 26, create: 26, publish: 3, analytics: 8 };
+export const EXPECTED_CADENCE_H: Record<string, number> = { research: 26, create: 26, publish: 3, analytics: 8, tokens: 8 };
 
 export interface Issue {
   severity: "warn" | "critical";
@@ -65,6 +66,7 @@ export async function runSupervisor(ctx: Ctx, rerun: (stage: string) => Promise<
     const recent = [...(await ctx.repo.videosByStatus("approved", 50)), ...(await ctx.repo.videosByStatus("posted", 50)), ...reviewQueue];
     const { issues, retry, spend24h } = checkHealth({ runs, reviewQueue, recentVideos: recent, dailyBudgetUsd: ctx.cfg.DAILY_BUDGET_USD });
 
+    issues.push(...tokenWarnings(ctx.cfg));
     const budgetBlown = issues.some((i) => i.message.includes("exceeds budget"));
     for (const s of retry) {
       if (budgetBlown) break; // never retry into a blown budget

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { checkHealth } from "worker/supervisor";
+import { tokenWarnings } from "worker/tokens";
 import { getConfig, getRepo } from "@/lib/server";
 import { INTEGRATIONS, isConfigured } from "@/lib/integrations";
 import { ago, fmtNum, videoPerformance } from "@/lib/view";
@@ -19,6 +20,7 @@ export default async function Overview() {
     repo.listAssets(),
   ]);
   const health = checkHealth({ runs: runs48.filter((r) => r.stage !== "supervisor"), reviewQueue: review, recentVideos: [...review, ...approved, ...posted], dailyBudgetUsd: cfg.DAILY_BUDGET_USD });
+  health.issues.push(...tokenWarnings(cfg));
   const views7 = perf.reduce((a, p) => a + p.views, 0);
   const installs7 = perf.reduce((a, p) => a + (p.installs ?? 0), 0);
   const hasInstalls = perf.some((p) => p.installs != null);

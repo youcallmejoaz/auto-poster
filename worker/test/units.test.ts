@@ -101,7 +101,7 @@ describe("analytics scoring", () => {
 describe("supervisor health", () => {
   const now = Date.parse("2026-01-10T12:00:00Z");
   const run = (stage: string, hoursAgo: number, status: JobRun["status"], cost = 0): JobRun => ({ id: `${stage}${hoursAgo}`, stage, status, started_at: new Date(now - hoursAgo * 36e5).toISOString(), cost_usd: cost, items: 1, error: status === "error" ? "boom" : null });
-  const healthy = [run("research", 5, "ok"), run("create", 4, "ok"), run("publish", 1, "ok"), run("analytics", 2, "ok")];
+  const healthy = [run("research", 5, "ok"), run("create", 4, "ok"), run("publish", 1, "ok"), run("analytics", 2, "ok"), run("tokens", 3, "ok")];
   it("is quiet when everything ran", () => {
     expect(checkHealth({ runs: healthy, reviewQueue: [], recentVideos: [], dailyBudgetUsd: 10, now }).issues).toEqual([]);
   });

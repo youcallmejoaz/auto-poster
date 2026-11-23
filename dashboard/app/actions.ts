@@ -12,6 +12,7 @@ import { TEMPLATE_IDS } from "renderer/schema";
 import { getConfig, getRepo, requireAuth, encKey } from "@/lib/server";
 import { SESSION_COOKIE, SESSION_TTL_MS, createSession, safeEqual } from "@/lib/session";
 import { testIntegration, type IntegrationId } from "@/lib/integrations";
+import { refreshInstagram, refreshTikTok, repoSink } from "worker/tokens";
 
 export type ActionResult = { ok: boolean; message: string } | null;
 
@@ -118,6 +119,11 @@ export async function saveSettings(_: ActionResult, f: FormData): Promise<Action
       else if (current.has(def.key)) ops.push({ op: "delete", key: def.key });
     }
   }
+  // A hand-pasted token invalidates what we knew about the previous one.
+  const setsKey = (k: string) => ops.some((o) => o.op === "set" && o.s.key === k);
+  const forget = (keys: string[]) => keys.forEach((k) => current.has(k) && !ops.some((o) => o.op === "delete" && o.key === k) && ops.push({ op: "delete", key: k }));
+  if (setsKey("IG_ACCESS_TOKEN")) forget(["IG_TOKEN_KIND", "IG_TOKEN_EXPIRES_AT"]);
+  if (setsKey("TIKTOK_ACCESS_TOKEN")) forget(["TIKTOK_TOKEN_EXPIRES_AT"]);
   if (!ops.length) return { ok: true, message: "No changes." };
 
   const merged = { ...process.env, ...settingsToEnv([...current.values()], key) } as Record<string, string | undefined>;
@@ -216,4 +222,19 @@ export async function importAttribution(_: ActionResult, f: FormData): Promise<A
   await getRepo().upsertAttribution(rows);
   revalidatePath("/analytics");
   return { ok: true, message: `Imported ${rows.length} rows. The next analytics run uses them.` };
+}
+
+// ---------- tokens ----------
+export async function refreshTokenNow(provider: "tiktok" | "instagram"): Promise<ActionResult> {
+  await requireAuth();
+  if (!encKey()) return { ok: false, message: "SETTINGS_ENCRYPTION_KEY isn't set on the server." };
+  try {
+    const cfg = await getConfig();
+    const sink = repoSink(getRepo(), encKey(), cfg);
+    const r = provider === "tiktok" ? await refreshTikTok(cfg, sink, { force: true }) : await refreshInstagram(cfg, sink, { force: true });
+    revalidatePath("/settings");
+    return { ok: r.status !== "not_configured", message: `${r.status === "not_configured" ? "Can't refresh" : r.status === "converted" ? "Converted" : "Refreshed"}: ${r.detail}` };
+  } catch (e) {
+    return { ok: false, message: (e as Error).message.slice(0, 300) };
+  }
 }

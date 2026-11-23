@@ -7,13 +7,14 @@ on:
     - cron: "12 * * * *"     # publish (hourly; only posts inside POST_SLOTS_UTC)
     - cron: "47 */6 * * *"   # analytics (every 6h)
     - cron: "22 * * * *"     # supervisor (hourly)
+    - cron: "52 */6 * * *"   # tokens (every 6h: TikTok tokens last 24h, refresh when <12h left)
   workflow_dispatch:
     inputs:
       stage:
         description: "Stage to run"
         required: true
         type: choice
-        options: [research, create, publish, analytics, supervisor]
+        options: [research, create, publish, analytics, tokens, supervisor]
 
 concurrency:
   group: studyshorts-${{ github.event.inputs.stage || github.event.schedule }}
@@ -45,6 +46,7 @@ jobs:
             "12 * * * *") s=publish;;
             "47 */6 * * *") s=analytics;;
             "22 * * * *") s=supervisor;;
+            "52 */6 * * *") s=tokens;;
             *) s="${{ github.event.inputs.stage }}";;
           esac
           echo "name=$s" >> "$GITHUB_OUTPUT"

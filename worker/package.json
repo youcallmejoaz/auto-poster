@@ -32,6 +32,7 @@
     "./github": "./src/core/github.ts",
     "./csv": "./src/research/sources.ts",
     "./script": "./src/creator/script.ts",
-    "./research": "./src/research/analyze.ts"
+    "./research": "./src/research/analyze.ts",
+    "./tokens": "./src/publisher/tokens.ts"
   }
 }
