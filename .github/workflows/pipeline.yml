@@ -24,22 +24,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
+      # Only these three are required. Every other key/setting is entered in the dashboard
+      # (Settings page), stored encrypted in Supabase, and loaded by each stage at start-up.
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-      IG_USER_ID: ${{ secrets.IG_USER_ID }}
-      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
-      TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
-      ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
-      APP_NAME: ${{ vars.APP_NAME }}
-      APP_DESCRIPTION: ${{ vars.APP_DESCRIPTION }}
-      APP_LANDING_URL: ${{ vars.APP_LANDING_URL }}
-      NICHE_HASHTAGS: ${{ vars.NICHE_HASHTAGS }}
-      COMPETITOR_ACCOUNTS: ${{ vars.COMPETITOR_ACCOUNTS }}
-      TIKTOK_PRIVACY: ${{ vars.TIKTOK_PRIVACY || 'SELF_ONLY' }}
-      AUTO_APPROVE: ${{ vars.AUTO_APPROVE || 'false' }}
+      SETTINGS_ENCRYPTION_KEY: ${{ secrets.SETTINGS_ENCRYPTION_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

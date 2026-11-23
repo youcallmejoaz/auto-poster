@@ -50,9 +50,10 @@ export function scriptToDraft(s: VideoScript, caption = "", hashtags: string[] =
 const SYSTEM = `You write scripts for short vertical videos (TikTok/Reels) for a study app. Goals in order: stop the scroll in the first 2 seconds, deliver one genuinely useful or relatable idea, and make the app the natural next step. Write how students actually talk: casual, specific, no corporate tone, no fake statistics, no claims the app can't back up. Respect the requested template:
 - listicle: hook promises N things; each beat is one numbered tip.
 - pov: hook is "POV: ..." relatable situation; beats are short chat-style reactions/moments; app appears as the turning point.
-- studyHack: hook names the method/result; beats are concrete steps.`;
+- studyHack: hook names the method/result; beats are concrete steps.
+- appDemo: hook states the pain/result; beats are short callouts over a real screen recording of the app (describe what the viewer sees the app doing). Only use it when it's listed as available.`;
 
-export async function writeScript(ctx: Ctx, brief: Brief, insights: Insight[], parent?: Video | null): Promise<ScriptDraft> {
+export async function writeScript(ctx: Ctx, brief: Brief, insights: Insight[], parent?: Video | null, opts: { hasAppDemo?: boolean } = {}): Promise<ScriptDraft> {
   const insightText = insights.map((i) => `- ${i.pattern} (hook: ${i.hook_type}, format: ${i.format}, cta: ${i.cta_style}, evidence ${i.evidence_score.toFixed(2)})`).join("\n");
   const parentText = parent
     ? `\nThis is an EDIT/VARIANT of an existing video. Keep what worked, change what the brief asks.\nExisting script (JSON):\n${JSON.stringify(scriptToDraft(parent.script, parent.caption, parent.hashtags))}\n`
@@ -64,6 +65,7 @@ export async function writeScript(ctx: Ctx, brief: Brief, insights: Insight[], p
     prompt: `App: ${ctx.cfg.APP_NAME} - ${ctx.cfg.APP_DESCRIPTION}
 Brief: ${brief.instruction}
 Preferred template: ${brief.template ?? parent?.template ?? "choose the best fit"}
+Available templates: listicle, pov, studyHack${opts.hasAppDemo ? ", appDemo (we have real app screen recordings - prefer it when showing the app helps)" : " (appDemo unavailable: no screen recordings uploaded)"}
 ${parentText}
 Current winning patterns in the niche:
 ${insightText || "- (no research yet - use proven study-niche hooks)"}

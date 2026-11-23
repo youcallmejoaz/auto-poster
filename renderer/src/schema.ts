@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const TEMPLATE_IDS = ["listicle", "pov", "studyHack"] as const;
+export const TEMPLATE_IDS = ["listicle", "pov", "studyHack", "appDemo"] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
 export const WordTiming = z.object({
@@ -43,6 +43,8 @@ export const VideoScript = z.object({
   backgroundVideo: z.string().optional(),
   /** Optional app screenshot/screen-recording shown in CTA (image or video URL). */
   appMedia: z.string().optional(),
+  /** Source durations (seconds) so clips can loop; filled in by render() when missing. */
+  mediaDurations: z.record(z.number()).optional(),
   audio: z
     .object({
       src: z.string(),

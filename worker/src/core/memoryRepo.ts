@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Repo } from "./repo";
-import type { Brief, Insight, JobRun, MetricSnapshot, Post, ResearchItem, Video, VideoStatus } from "./types";
+import type { Asset, AssetKind, AttributionRow, Brief, Insight, JobRun, MetricSnapshot, Post, ResearchItem, Video, VideoStatus } from "./types";
+import type { StoredSetting } from "./settings";
 
 const daysAgo = (d: number) => Date.now() - d * 864e5;
 const now = () => new Date().toISOString();
@@ -15,6 +16,12 @@ export class MemoryRepo implements Repo {
   metrics: MetricSnapshot[] = [];
   runs: JobRun[] = [];
   files = new Map<string, string>();
+  settings = new Map<string, StoredSetting>();
+  assets: Asset[] = [];
+  attribution = new Map<string, AttributionRow>();
+  clicks: { code: string; platform: string | null; at: string }[] = [];
+  /** Maps storage paths to URLs (e.g. demo mode serves local files over HTTP). */
+  urlFor: (path: string) => string = (p) => `file://${this.files.get(p) ?? p}`;
 
   async upsertResearch(items: ResearchItem[]) {
     let n = 0;
@@ -71,7 +78,7 @@ export class MemoryRepo implements Repo {
     return key;
   }
   async signedVideoUrl(storagePath: string) {
-    return `file://${this.files.get(storagePath) ?? storagePath}`;
+    return this.urlFor(storagePath);
   }
   async insertPost(p: Post) {
     const out = { ...p, id: randomUUID() };
@@ -111,5 +118,58 @@ export class MemoryRepo implements Repo {
   }
   async runsSince(hours: number) {
     return this.runs.filter((r) => Date.parse(r.started_at) >= Date.now() - hours * 36e5);
+  }
+
+  async listVideos({ status, limit = 100 }: { status?: VideoStatus; limit?: number }) {
+    return this.videos.filter((v) => !status || v.status === status).sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? "")).slice(0, limit);
+  }
+  async listBriefs(status?: Brief["status"], limit = 100) {
+    return this.briefs.filter((b) => !status || b.status === status).sort((a, b) => b.priority - a.priority).slice(0, limit);
+  }
+  async listRuns(limit: number) {
+    return [...this.runs].sort((a, b) => b.started_at.localeCompare(a.started_at)).slice(0, limit);
+  }
+  async getSettings() {
+    return [...this.settings.values()];
+  }
+  async setSetting(s: StoredSetting) {
+    this.settings.set(s.key, { ...s, updated_at: now() });
+  }
+  async deleteSetting(key: string) {
+    this.settings.delete(key);
+  }
+  async listAssets(kind?: AssetKind) {
+    return this.assets.filter((a) => !kind || a.kind === kind);
+  }
+  async insertAsset(a: Asset) {
+    const out = { ...a, id: randomUUID(), created_at: now() };
+    this.assets.push(out);
+    return out;
+  }
+  async deleteAsset(id: string) {
+    this.assets = this.assets.filter((a) => a.id !== id);
+  }
+  async signedAssetUrl(storagePath: string) {
+    return this.urlFor(storagePath);
+  }
+  async createAssetUpload(storagePath: string) {
+    return { url: `memory://${storagePath}` };
+  }
+  async upsertAttribution(rows: AttributionRow[]) {
+    for (const r of rows) this.attribution.set(r.code, { ...r, updated_at: now() });
+  }
+  async getAttribution() {
+    return [...this.attribution.values()];
+  }
+  async logClick(code: string, platform: string | null) {
+    this.clicks.push({ code, platform, at: now() });
+  }
+  async clickCounts() {
+    const m = new Map<string, number>();
+    for (const c of this.clicks) m.set(c.code, (m.get(c.code) ?? 0) + 1);
+    return m;
+  }
+  async latestPost(platform?: string) {
+    return [...this.posts].filter((p) => p.posted_at && (!platform || p.platform === platform)).sort((a, b) => b.posted_at!.localeCompare(a.posted_at!))[0] ?? null;
   }
 }

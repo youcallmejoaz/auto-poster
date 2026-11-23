@@ -18,5 +18,20 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^5.1.1"
+  },
+  "exports": {
+    "./settings": "./src/core/settings.ts",
+    "./repo": "./src/core/repo.ts",
+    "./supabaseRepo": "./src/core/supabaseRepo.ts",
+    "./memoryRepo": "./src/core/memoryRepo.ts",
+    "./types": "./src/core/types.ts",
+    "./env": "./src/core/env.ts",
+    "./analytics": "./src/analytics/analytics.ts",
+    "./supervisor": "./src/supervisor/supervisor.ts",
+    "./links": "./src/publisher/links.ts",
+    "./github": "./src/core/github.ts",
+    "./csv": "./src/research/sources.ts",
+    "./script": "./src/creator/script.ts",
+    "./research": "./src/research/analyze.ts"
   }
 }

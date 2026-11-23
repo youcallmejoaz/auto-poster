@@ -24,6 +24,27 @@ export class FileAttribution implements Attribution {
 
 export const noAttribution: Attribution = { lookup: () => null };
 
+export const linkCode = (link: string) => new URL(link).searchParams.get("utm_content") ?? "";
+
+/**
+ * Attribution imported via the dashboard (attribution table), plus clicks counted by the
+ * dashboard's /go link-in-bio redirect when the import has no click numbers.
+ */
+export class DbAttribution implements Attribution {
+  private constructor(private rows: Map<string, { clicks: number; installs: number }>, private clicks: Map<string, number>) {}
+  static async load(repo: import("../core/repo").Repo) {
+    const rows = new Map((await repo.getAttribution()).map((r) => [r.code, { clicks: Number(r.clicks), installs: Number(r.installs) }]));
+    return new DbAttribution(rows, await repo.clickCounts());
+  }
+  lookup(link: string) {
+    const code = linkCode(link);
+    const r = this.rows.get(code);
+    const c = this.clicks.get(code);
+    if (!r && c == null) return null;
+    return { clicks: r?.clicks || c || 0, installs: r?.installs ?? 0 };
+  }
+}
+
 /** Pulls current stats for posts from the last `days` days and stores a snapshot per post. */
 export async function collectMetrics(ctx: Ctx, publishers: Publisher[], attribution: Attribution, days = 14) {
   const posts = await ctx.repo.postsSince(days);

@@ -98,3 +98,20 @@ export interface JobRun {
   items: number;
   error?: string | null;
 }
+
+export type AssetKind = "app_demo" | "broll" | "screenshot";
+export interface Asset {
+  id?: string;
+  kind: AssetKind;
+  label: string;
+  storage_path: string;
+  content_type: string;
+  created_at?: string;
+}
+
+export interface AttributionRow {
+  code: string;
+  clicks: number;
+  installs: number;
+  updated_at?: string;
+}

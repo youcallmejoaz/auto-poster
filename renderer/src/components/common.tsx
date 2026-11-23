@@ -1,8 +1,8 @@
 import React from "react";
-import { AbsoluteFill, Audio, OffthreadVideo, interpolate, spring, useCurrentFrame, useVideoConfig, staticFile } from "remotion";
+import { AbsoluteFill, Audio, Loop, OffthreadVideo, interpolate, spring, useCurrentFrame, useVideoConfig, staticFile } from "remotion";
 import type { VideoScript, WordTiming } from "../schema";
 
-const resolveSrc = (s: string) => (/^(https?:|data:|file:)/.test(s) ? s : staticFile(s));
+export const resolveSrc = (s: string) => (/^(https?:|data:|file:)/.test(s) ? s : staticFile(s));
 
 export const Background: React.FC<{ script: VideoScript }> = ({ script }) => {
   const frame = useCurrentFrame();
@@ -12,7 +12,7 @@ export const Background: React.FC<{ script: VideoScript }> = ({ script }) => {
     <AbsoluteFill style={{ background: `linear-gradient(${angle}deg, ${bg} 0%, ${bg2} 100%)` }}>
       {script.backgroundVideo ? (
         <>
-          <OffthreadVideo src={resolveSrc(script.backgroundVideo)} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <LoopedVideo src={script.backgroundVideo} durations={script.mediaDurations} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           <AbsoluteFill style={{ background: "rgba(0,0,0,0.45)" }} />
         </>
       ) : null}
@@ -88,8 +88,8 @@ export const CtaCard: React.FC<{ script: VideoScript; text: string }> = ({ scrip
   return (
     <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", gap: 50, flexDirection: "column" }}>
       {script.appMedia ? (
-        /\.(mp4|mov|webm)$/i.test(script.appMedia) ? (
-          <OffthreadVideo src={resolveSrc(script.appMedia)} muted style={{ width: 520, borderRadius: 48, boxShadow: "0 30px 80px rgba(0,0,0,.5)", transform: `scale(${p})` }} />
+        isVideoSrc(script.appMedia) ? (
+          <LoopedVideo src={script.appMedia} durations={script.mediaDurations} style={{ width: 520, borderRadius: 48, boxShadow: "0 30px 80px rgba(0,0,0,.5)", transform: `scale(${p})` }} />
         ) : (
           <img src={resolveSrc(script.appMedia)} style={{ width: 520, borderRadius: 48, boxShadow: "0 30px 80px rgba(0,0,0,.5)", transform: `scale(${p})` }} />
         )
@@ -102,4 +102,26 @@ export const CtaCard: React.FC<{ script: VideoScript; text: string }> = ({ scrip
       </div>
     </AbsoluteFill>
   );
+};
+
+export const isVideoSrc = (s: string) => /\.(mp4|mov|webm)(\?|$)/i.test(s) || s.startsWith("data:video");
+
+/** Phone mockup showing an app screen recording or screenshot. */
+export const Phone: React.FC<{ src: string; durations?: Record<string, number>; width?: number; scale?: number }> = ({ src, durations, width = 620, scale = 1 }) => (
+  <div style={{ width, aspectRatio: "9 / 19.5", borderRadius: 72, padding: 18, background: "#0b0b0f", boxShadow: "0 40px 120px rgba(0,0,0,.55), inset 0 0 0 3px #2a2a33", transform: `scale(${scale})` }}>
+    <div style={{ width: "100%", height: "100%", borderRadius: 56, overflow: "hidden", background: "#000" }}>
+      {isVideoSrc(src) ? <LoopedVideo src={src} durations={durations} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <img src={resolveSrc(src)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+    </div>
+  </div>
+);
+
+/**
+ * OffthreadVideo (frame-accurate, decodes H.264 outside the browser) looped to cover the scene.
+ * Needs the clip's duration, which render() probes up front.
+ */
+export const LoopedVideo: React.FC<{ src: string; durations?: Record<string, number>; style: React.CSSProperties }> = ({ src, durations, style }) => {
+  const { fps } = useVideoConfig();
+  const sec = durations?.[src];
+  const video = <OffthreadVideo src={resolveSrc(src)} muted style={style} />;
+  return sec ? <Loop durationInFrames={Math.max(1, Math.floor(sec * fps))}>{video}</Loop> : video;
 };

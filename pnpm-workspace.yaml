@@ -1,3 +1,4 @@
 packages:
   - "renderer"
   - "worker"
+  - "dashboard"

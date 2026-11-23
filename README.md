@@ -1,79 +1,99 @@
 # StudyShorts
 
-An automated short-video pipeline for a study app. It researches what performs in the niche, writes and renders 9:16 videos, posts them to TikTok and Instagram Reels, measures results (including installs), and feeds those results back into the next batch. A supervisor watches the whole thing.
+An automated short-video pipeline for a study app, with a web dashboard. It researches what performs in the niche, writes and renders 9:16 videos, posts them to TikTok and Instagram Reels, measures results (including installs), and feeds those results back into the next batch. A supervisor watches the whole thing. You run it from the dashboard.
 
 ```
-research ──► briefs ──► create (script → voice → render → AI critique loop) ──► review queue
+research ──► briefs ──► create (script → voice → render → AI critique loop) ──► review (dashboard)
    ▲                                                                              │ approve
    │                                                                              ▼
-analytics ◄── metrics + installs ◄────────────── posts ◄──────────────────── publish
+analytics ◄── metrics + installs ◄── /go bio link ◄────────── posts ◄──────── publish
    └──► feedback briefs (variants / recuts) ──► create          supervisor watches every stage
 ```
 
-Each "agent" is a scheduled stage with typed inputs and outputs in Postgres, rather than a free-roaming agent. Claude is called only where judgement is needed: spotting patterns, writing scripts, critiquing frames and reading analytics. This keeps the system debuggable, cheap and testable.
-
-| Stage | Schedule | What it does |
-|---|---|---|
-| `research` | daily | Pulls niche posts (Apify TikTok/IG scrapers, or a CSV), ranks them by **outperformance vs follower count**, extracts reusable patterns (`insights`), and queues `briefs`. |
-| `create` | daily | Brief → script (Sonnet) → ElevenLabs voiceover with word timings → Remotion render. Opus scores the hook, mid and CTA frames against a rubric; below threshold it revises and re-renders (max N loops). Output goes to the library as `review`. |
-| `publish` | hourly | Posts `approved` videos inside your posting slots and under a daily cap. Uses the IG Graph API (Reels) and the TikTok Content Posting API. Every post gets a per-video tracked link. |
-| `analytics` | 6-hourly | Pulls views, engagement and watch time, plus installs per tracked link. Scores videos by cohort percentile (installs/1k views dominate when available), then asks Opus for **recut / variant / new** briefs. Hallucinated video ids are dropped. |
-| `supervisor` | hourly | Checks each stage's SLA, failures, stuck runs, 24h spend against the budget, review backlog and quality trend. It retries a failed stage once (never twice in a row, and never past the budget) and alerts via a Slack/Discord webhook. |
-
-## Layout
+## What's in the repo
 
 ```
-renderer/   Remotion project: VideoScript schema, 3 templates (listicle, pov, studyHack), render API
-worker/     Stages + CLI. src/{core,research,creator,publisher,analytics,supervisor}
-supabase/   SQL migration (tables, enums, storage bucket, RLS on)
-.github/    Cron workflow that runs each stage
+dashboard/  Next.js web app: review, library, briefs, research, analytics, media, settings
+worker/     The pipeline stages + CLI (research, create, publish, analytics, supervisor)
+renderer/   Remotion video templates: listicle, pov, studyHack, appDemo
+supabase/   SQL migrations
+.github/    Scheduled workflow that runs each stage (and the dashboard's Run buttons)
 ```
 
-## Setup
+## The dashboard
 
-1. `pnpm install`
-2. Create a Supabase project and run `supabase/migrations/0001_init.sql`.
-3. `cp .env.example .env` and fill it in (see below for what you need).
-4. Try it with no database: `pnpm --filter worker stage brief "3 active recall hacks" --dry-run`
-5. For production, add the same values as GitHub Actions secrets/vars. `.github/workflows/pipeline.yml` runs the stages.
+| Page | What you do there |
+|---|---|
+| **Overview** | Health (stalled or failed stages, spend against budget, review backlog), a setup checklist, recent runs, and **Run now** buttons for each stage. |
+| **Review** | Watch each new video and read the AI critic's notes and the script. Edit the caption and hashtags, then **Approve**, **Request edit** (queues a new version), or **Reject** (optionally queues a recut with your note). |
+| **Library** | Every video by status, with a detail page showing posts, per-platform metrics, tracked links and the version history. |
+| **Briefs** | Queue your own video ideas, and see what research and analytics queued. Drop briefs you don't want. |
+| **Research** | Winning niche patterns, plus the top posts ranked by outperformance against follower count. |
+| **Analytics** | Score per video and per template, installs per 1k views, your link-in-bio URLs, and **install import** (paste a CSV/JSON export from Branch, AppsFlyer or App Store Connect). |
+| **Media** | Upload app screen recordings, screenshots and b-roll. Files go straight from the browser to storage. The creator uses them automatically: the **App demo** template puts your recording in a phone frame, and b-roll goes behind the other templates. |
+| **Settings** | Enter every API key and setting: app description, brand colours, models, voice, research sources, IG/TikTok tokens, posting times, quality bar, budget and alerts. A **Test connection** button checks each key. |
 
-Render the sample videos locally with `pnpm render:sample` (outputs to `renderer/out/`). To preview templates live, run `pnpm --filter renderer studio`.
+**How keys are stored:** secrets are encrypted with AES-256-GCM (`SETTINGS_ENCRYPTION_KEY`) before they reach the database. They are never sent back to the browser; you only see a masked value. Settings are validated before saving, so a typo can't break the pipeline. Each stage loads the latest settings when it starts, so nothing needs redeploying.
 
-## Daily use (the review loop)
+**Link in bio (`/go`):** set *Dashboard public URL* in Settings, then put `https://<dashboard>/go?p=tiktok` in your TikTok bio and `?p=instagram` in your IG bio. Each visit redirects to the newest video's tracked link and logs the click. That's how installs get tied to specific videos, since links in captions aren't clickable.
+
+Try the dashboard without any setup:
 
 ```bash
-pnpm --filter worker stage list review                 # ids, scores, 24h preview links
-pnpm --filter worker stage approve <videoId>
-pnpm --filter worker stage reject <videoId> "hook too slow, cut the first beat"   # queues a recut
-pnpm --filter worker stage edit <videoId> "make a finals-week version"           # queues v2
-pnpm --filter worker stage brief "POV: group project carry" --template pov --priority 90
+pnpm install
+cd dashboard && DEMO_MODE=true pnpm dev   # http://localhost:3000, sample data
 ```
 
-`AUTO_APPROVE=true` skips human review **only** for videos that pass the quality threshold. Leave it off until you trust the output.
+## Setup (about 30 minutes)
 
-## What you need to provide
+1. **Supabase:** create a project, then run `supabase/migrations/0001_init.sql` and `0002_dashboard.sql` in the SQL editor.
+2. **Generate an encryption key:** `openssl rand -base64 32`.
+3. **Deploy the dashboard** to Vercel or Netlify. Set the root directory to `dashboard/` and the build command to `pnpm build`. Add these env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SETTINGS_ENCRYPTION_KEY`, `DASHBOARD_PASSWORD`.
+4. **GitHub Actions:** in the repo's Settings → Secrets → Actions, add the same `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `SETTINGS_ENCRYPTION_KEY`. The workflow then runs on schedule.
+5. **Open the dashboard → Settings** and fill in your keys, then follow the checklist on Overview. For the Run buttons, create a fine-grained GitHub token for this repo with *Actions: read & write* and add it under Automation.
+
+### What you need
 
 | Item | Why | Notes |
 |---|---|---|
-| Anthropic API key | scripts, critique, analytics | ~$0.05–0.30 per video, depending on loops |
-| Supabase project | library, jobs, metrics, video storage | |
-| ElevenLabs key | voiceover + synced captions | Optional. Without it, videos are text-only. |
-| Apify token | research | Optional. You can import a CSV instead (e.g. a TikTok Creative Center export). |
-| IG Business/Creator account + Meta app token | Reels publishing + insights | Scopes: `instagram_content_publish`, insights |
-| TikTok developer app | posting + stats | **Apply for the audit now; it takes weeks.** Until then, posts are private (`SELF_ONLY`). |
-| Attribution | installs per video | Point `APP_LANDING_URL` at a Branch/AppsFlyer/smart link. Export installs per `utm_content` to `INSTALLS_FILE`. |
-| Brand assets | | App screen recording/screenshot (`appMedia`), b-roll (`backgroundVideo`), colours |
+| Anthropic API key | scripts, critique, research, analytics | ~$0.05–0.30 per video |
+| Supabase project | database + video/media storage | free tier is fine to start |
+| ElevenLabs key | voiceover + word-by-word captions | optional |
+| Apify token | trend research | optional; you can import a CSV with the CLI instead |
+| IG Business/Creator account + Meta app token | Reels publishing + insights | the long-lived token lasts ~60 days, so re-paste it in Settings |
+| TikTok developer app | posting + stats | **apply for the audit now (takes weeks)**; until then posts are private |
+| Branch/AppsFlyer/App Store campaign links | installs per video | use it as *Download link* and import installs on Analytics |
+| App screen recordings | the App demo template | vertical, 10–40s, no personal data on screen |
+
+## Stages (run by GitHub Actions)
+
+| Stage | Schedule | What it does |
+|---|---|---|
+| `research` | daily | Pulls niche posts, ranks them by outperformance, extracts patterns, queues briefs. |
+| `create` | daily | Turns a brief into a script, voiceover and render. The AI critic scores the frames and the stage revises until the video passes (max N loops). Videos land in Review. |
+| `publish` | hourly | Posts approved videos inside your posting times, under the daily cap. |
+| `analytics` | 6-hourly | Pulls metrics and installs, scores videos, and queues recut/variant briefs for the winners. |
+| `supervisor` | hourly | Checks stage SLAs, failures, spend and backlog. It retries a failed stage once and sends alerts to Slack/Discord. |
+
+## CLI (optional)
+
+```bash
+pnpm --filter worker stage <research|create|publish|analytics|supervisor> [--dry-run]
+pnpm --filter worker stage brief "POV: group project carry" --template pov
+pnpm --filter worker stage list review
+```
 
 ## Honest limitations
 
-- **Links in TikTok/IG captions aren't clickable.** Per-video install attribution only works if the tracked link sits in the bio (rotate it to the latest video, or use a link-in-bio page that lists recent videos). Without attribution, analytics optimises for views and engagement and says so in its prompt.
-- **Scraping:** Apify actors scrape public data. The ToS risk sits with the vendor, but treat it as best-effort research, not a guaranteed feed.
-- **Templates are the creative ceiling.** Three templates ship. More formats (green-screen, app-demo walkthroughs, stitched b-roll) are where future quality gains come from. The schema supports `backgroundVideo` and `appMedia` already.
-- **No music.** Trending sounds can't be added through the posting APIs, so add licensed music in the template if you want it.
+- **Tokens expire.** Instagram tokens last about 60 days, and TikTok access tokens expire daily unless refreshed. When one expires, the supervisor alerts you and you re-paste it in Settings. Automatic refresh isn't built yet.
+- **Scraping:** Apify actors scrape public data, so treat research as best-effort.
+- **No music:** trending sounds can't be added through the posting APIs.
+- **Single admin login.** The dashboard has one password, not per-user accounts.
 
 ## Tests
 
 ```bash
-pnpm test        # unit tests + a full research→create→publish→analytics→recut loop with fakes
-pnpm typecheck
+pnpm test        # worker: unit + full-loop tests with fakes
+pnpm typecheck   # all packages
+pnpm render:sample
 ```

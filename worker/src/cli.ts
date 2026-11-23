@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { loadConfig, type Config } from "./core/env";
+import { loadConfig, loadRuntimeConfig, type Config } from "./core/env";
 import type { Ctx } from "./core/context";
 import { AnthropicLlm } from "./core/llm";
 import { MemoryRepo } from "./core/memoryRepo";
@@ -11,7 +11,7 @@ import { remotionRenderer, runCreate } from "./creator/create";
 import { ElevenLabsTts, NoTts } from "./creator/tts";
 import { DryRunPublisher, InstagramPublisher, TikTokPublisher, type Publisher } from "./publisher/platforms";
 import { runPublish } from "./publisher/publish";
-import { FileAttribution, noAttribution, runAnalytics } from "./analytics/analytics";
+import { DbAttribution, FileAttribution, runAnalytics } from "./analytics/analytics";
 import { runSupervisor } from "./supervisor/supervisor";
 
 const USAGE = `Usage: pnpm stage <command> [flags]
@@ -69,7 +69,7 @@ async function runNamed(ctx: Ctx, stage: string): Promise<unknown> {
     case "publish":
       return runPublish(ctx, publishers(ctx), { force: process.argv.includes("--force") });
     case "analytics":
-      return runAnalytics(ctx, publishers(ctx), cfg.INSTALLS_FILE && fs.existsSync(cfg.INSTALLS_FILE) ? new FileAttribution(cfg.INSTALLS_FILE) : noAttribution);
+      return runAnalytics(ctx, publishers(ctx), cfg.INSTALLS_FILE && fs.existsSync(cfg.INSTALLS_FILE) ? new FileAttribution(cfg.INSTALLS_FILE) : await DbAttribution.load(ctx.repo));
     case "supervisor":
       return runSupervisor(ctx, (s) => runNamed(ctx, s));
     default:
@@ -80,9 +80,11 @@ async function runNamed(ctx: Ctx, stage: string): Promise<unknown> {
 async function main() {
   const [cmd, a1, a2] = process.argv.slice(2).filter((x, i, all) => !x.startsWith("--") && !(i > 0 && ["--csv", "--template", "--priority"].includes(all[i - 1])));
   if (!cmd || cmd === "help") return console.log(USAGE);
-  const cfg = loadConfig();
   const dryRun = process.argv.includes("--dry-run");
-  const ctx: Ctx = { cfg, repo: makeRepo(cfg, dryRun), llm: new AnthropicLlm(cfg.ANTHROPIC_API_KEY), dryRun, cost: { usd: 0 }, log: (...m) => console.log(new Date().toISOString(), ...m) };
+  const repo = makeRepo(loadConfig(), dryRun);
+  // Settings saved in the dashboard override env vars.
+  const cfg = await loadRuntimeConfig(dryRun ? null : repo);
+  const ctx: Ctx = { cfg, repo, llm: new AnthropicLlm(cfg.ANTHROPIC_API_KEY), dryRun, cost: { usd: 0 }, log: (...m) => console.log(new Date().toISOString(), ...m) };
 
   switch (cmd) {
     case "brief": {

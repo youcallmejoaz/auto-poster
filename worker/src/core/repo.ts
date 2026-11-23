@@ -1,4 +1,5 @@
-import type { Brief, Insight, JobRun, MetricSnapshot, Post, ResearchItem, Video, VideoStatus } from "./types";
+import type { Asset, AssetKind, AttributionRow, Brief, Insight, JobRun, MetricSnapshot, Post, ResearchItem, Video, VideoStatus } from "./types";
+import type { StoredSetting } from "./settings";
 
 /** Storage abstraction: Supabase in prod, in-memory for tests and dry runs. */
 export interface Repo {
@@ -30,4 +31,26 @@ export interface Repo {
   startRun(stage: string): Promise<JobRun>;
   finishRun(id: string, patch: Partial<JobRun>): Promise<void>;
   runsSince(hours: number): Promise<JobRun[]>;
+
+  // --- dashboard ---
+  listVideos(opts: { status?: VideoStatus; limit?: number }): Promise<Video[]>;
+  listBriefs(status?: Brief["status"], limit?: number): Promise<Brief[]>;
+  listRuns(limit: number): Promise<JobRun[]>;
+
+  getSettings(): Promise<StoredSetting[]>;
+  setSetting(s: StoredSetting): Promise<void>;
+  deleteSetting(key: string): Promise<void>;
+
+  listAssets(kind?: AssetKind): Promise<Asset[]>;
+  insertAsset(a: Asset): Promise<Asset>;
+  deleteAsset(id: string): Promise<void>;
+  signedAssetUrl(storagePath: string, expiresSec: number): Promise<string>;
+  /** Signed upload target so browsers upload large files straight to storage. */
+  createAssetUpload(storagePath: string): Promise<{ url: string }>;
+
+  upsertAttribution(rows: AttributionRow[]): Promise<void>;
+  getAttribution(): Promise<AttributionRow[]>;
+  logClick(code: string, platform: string | null): Promise<void>;
+  clickCounts(): Promise<Map<string, number>>;
+  latestPost(platform?: string): Promise<Post | null>;
 }

@@ -4,14 +4,16 @@ import { FPS, HEIGHT, WIDTH, VideoScript, buildTimeline, type TemplateId } from 
 import { Listicle } from "./templates/Listicle";
 import { Pov } from "./templates/Pov";
 import { StudyHack } from "./templates/StudyHack";
+import { AppDemo } from "./templates/AppDemo";
 import sample from "../fixtures/listicle.json";
 
-const TEMPLATES: Record<TemplateId, React.FC<{ script: VideoScript }>> = { listicle: Listicle, pov: Pov, studyHack: StudyHack };
+const TEMPLATES: Record<TemplateId, React.FC<{ script: VideoScript }>> = { listicle: Listicle, pov: Pov, studyHack: StudyHack, appDemo: AppDemo };
 
 /** Single entry composition; picks the template from the script props. */
 const Main: React.FC<{ script: VideoScript }> = ({ script }) => {
   const parsed = VideoScript.parse(script);
-  const T = TEMPLATES[parsed.template];
+  // appDemo needs a screen recording; without one, fall back to the step-card layout.
+  const T = parsed.template === "appDemo" && !parsed.appMedia ? StudyHack : TEMPLATES[parsed.template];
   return <T script={parsed} />;
 };
 

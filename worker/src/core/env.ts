@@ -8,6 +8,11 @@ const Env = z.object({
   APP_LANDING_URL: z.string().url().default("https://example.com/download"),
   NICHE_HASHTAGS: z.string().default("studytok,studywithme,studytips,examseason,studymotivation"),
   COMPETITOR_ACCOUNTS: z.string().default(""), // comma-separated handles
+  DASHBOARD_URL: z.string().optional(), // public URL of the dashboard; enables the /go link-in-bio
+  BRAND_COLORS: z.string().default(""), // "bg,bg2,accent" hex
+  SETTINGS_ENCRYPTION_KEY: z.string().optional(),
+  GITHUB_REPO: z.string().optional(),
+  GITHUB_TOKEN: z.string().optional(),
 
   SUPABASE_URL: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
@@ -48,3 +53,14 @@ const Env = z.object({
 
 export type Config = z.infer<typeof Env>;
 export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => Env.parse(env);
+
+/**
+ * Runtime config: env vars, overridden by settings saved in the dashboard.
+ * Bootstrap keys (Supabase + encryption key) always come from env.
+ */
+export async function loadRuntimeConfig(repo: { getSettings(): Promise<import("./settings").StoredSetting[]> } | null, env: NodeJS.ProcessEnv = process.env): Promise<Config> {
+  if (!repo) return loadConfig(env);
+  const { settingsToEnv } = await import("./settings");
+  const fromDb = settingsToEnv(await repo.getSettings(), env.SETTINGS_ENCRYPTION_KEY);
+  return loadConfig({ ...env, ...fromDb });
+}
