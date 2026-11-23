@@ -1,0 +1,65 @@
+name: studyshorts-pipeline
+
+on:
+  schedule:
+    - cron: "7 6 * * *"      # research (daily)
+    - cron: "37 7 * * *"     # create (daily, after research)
+    - cron: "12 * * * *"     # publish (hourly; only posts inside POST_SLOTS_UTC)
+    - cron: "47 */6 * * *"   # analytics (every 6h)
+    - cron: "22 * * * *"     # supervisor (hourly)
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Stage to run"
+        required: true
+        type: choice
+        options: [research, create, publish, analytics, supervisor]
+
+concurrency:
+  group: studyshorts-${{ github.event.inputs.stage || github.event.schedule }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
+      ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+      APP_NAME: ${{ vars.APP_NAME }}
+      APP_DESCRIPTION: ${{ vars.APP_DESCRIPTION }}
+      APP_LANDING_URL: ${{ vars.APP_LANDING_URL }}
+      NICHE_HASHTAGS: ${{ vars.NICHE_HASHTAGS }}
+      COMPETITOR_ACCOUNTS: ${{ vars.COMPETITOR_ACCOUNTS }}
+      TIKTOK_PRIVACY: ${{ vars.TIKTOK_PRIVACY || 'SELF_ONLY' }}
+      AUTO_APPROVE: ${{ vars.AUTO_APPROVE || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Pick stage
+        id: stage
+        run: |
+          case "${{ github.event.schedule }}" in
+            "7 6 * * *") s=research;;
+            "37 7 * * *") s=create;;
+            "12 * * * *") s=publish;;
+            "47 */6 * * *") s=analytics;;
+            "22 * * * *") s=supervisor;;
+            *) s="${{ github.event.inputs.stage }}";;
+          esac
+          echo "name=$s" >> "$GITHUB_OUTPUT"
+      - name: Install Chrome for rendering
+        if: steps.stage.outputs.name == 'create' || steps.stage.outputs.name == 'supervisor'
+        run: cd renderer && npx remotion browser ensure
+      - run: pnpm --filter worker stage ${{ steps.stage.outputs.name }}

@@ -1,0 +1,12 @@
+{
+  "template": "studyHack",
+  "title": "Blurting method",
+  "hook": { "narration": "This two minute method helped me remember everything for my finals.", "onScreen": "The 2-minute method for finals" },
+  "beats": [
+    { "narration": "Read one section of your notes.", "onScreen": "Read ONE section" },
+    { "narration": "Close it and blurt everything you remember on a blank page.", "onScreen": "Close it. Blurt it all out." },
+    { "narration": "Compare, and highlight what you missed in red.", "onScreen": "Highlight gaps in red 🔴" }
+  ],
+  "cta": { "narration": "The app does this for you with spaced repetition.", "onScreen": "Let the app quiz your gaps", "appName": "StudyApp" },
+  "theme": { "bg": "#1e1b4b", "bg2": "#9d174d", "accent": "#f472b6" }
+}

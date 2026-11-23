@@ -1,0 +1,12 @@
+{
+  "template": "listicle",
+  "title": "3 study hacks for exam week",
+  "hook": { "narration": "Three study hacks that actually work the night before an exam.", "onScreen": "3 study hacks that ACTUALLY work 📚" },
+  "beats": [
+    { "narration": "One. Close your notes and write down everything you remember. That's active recall.", "onScreen": "Active recall > re-reading" },
+    { "narration": "Two. Study in 25 minute blocks with 5 minute breaks.", "onScreen": "25 min focus / 5 min break" },
+    { "narration": "Three. Teach it out loud like you're explaining it to a friend.", "onScreen": "Teach it out loud 🗣️" }
+  ],
+  "cta": { "narration": "Our app turns your notes into flashcards automatically.", "onScreen": "Turn notes into flashcards in seconds", "appName": "StudyApp" },
+  "theme": { "bg": "#0f172a", "bg2": "#4c1d95", "accent": "#facc15" }
+}

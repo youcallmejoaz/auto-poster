@@ -1,0 +1,13 @@
+{
+  "template": "pov",
+  "title": "POV exam tomorrow",
+  "hook": { "narration": "POV: your exam is tomorrow and you haven't started.", "onScreen": "POV: exam is tomorrow and you haven't started 💀" },
+  "beats": [
+    { "narration": "Me opening a 90 page PDF.", "onScreen": "*opens 90-page PDF*" },
+    { "narration": "My brain: absolutely not.", "onScreen": "brain: absolutely not" },
+    { "narration": "Then I pasted it into the app and got flashcards in ten seconds.", "onScreen": "pastes it into StudyApp → 120 flashcards in 10s" },
+    { "narration": "Now we're actually studying.", "onScreen": "ok now we're cooking 🔥" }
+  ],
+  "cta": { "narration": "Try it free, link in bio.", "onScreen": "Try it free", "appName": "StudyApp" },
+  "theme": { "bg": "#111827", "bg2": "#065f46", "accent": "#34d399" }
+}

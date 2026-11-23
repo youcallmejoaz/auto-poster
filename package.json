@@ -1,0 +1,15 @@
+{
+  "name": "studyshorts",
+  "private": true,
+  "scripts": {
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "render:sample": "pnpm --filter renderer render:sample"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@remotion/compositor-linux-x64-gnu"
+    ]
+  }
+}
