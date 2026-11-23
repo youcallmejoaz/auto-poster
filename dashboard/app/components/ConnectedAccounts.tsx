@@ -24,7 +24,7 @@ function expiryText(e: string | null) {
   return { text: `Expires in ${h < 48 ? `${Math.round(h)}h` : `${Math.round(h / 24)} days`}`, tone: h < 2 ? "bad" : "ok" };
 }
 
-export function ConnectedAccounts({ accounts, warnings, dashboardUrlSet }: { accounts: AccountView[]; warnings: string[]; dashboardUrlSet: boolean }) {
+export function ConnectedAccounts({ accounts, warnings, dashboardUrlSet, siteUrl }: { accounts: AccountView[]; warnings: string[]; dashboardUrlSet: boolean; siteUrl: string }) {
   return (
     <div className="card" style={{ marginBottom: 20 }}>
       <h2>Connected accounts</h2>
@@ -50,9 +50,11 @@ export function ConnectedAccounts({ accounts, warnings, dashboardUrlSet }: { acc
                 {a.connected && <ActionButton className="btn" label="Refresh now" pendingLabel="Refreshing…" run={() => refreshTokenNow(a.id)} />}
               </div>
               <details className="small">
-                <summary>Redirect URI to register in the {a.name} developer portal</summary>
+                <summary>URLs for the {a.name} developer portal (redirect, terms, privacy)</summary>
                 <div style={{ marginTop: 6 }}><code>{a.redirectUri}</code></div>
-                {!dashboardUrlSet && <div className="muted" style={{ marginTop: 4 }}>Set “Dashboard public URL” below so this uses your real domain.</div>}
+                <div style={{ marginTop: 8 }}>Terms of Service URL: <code>{siteUrl}/terms</code></div>
+                <div style={{ marginTop: 4 }}>Privacy Policy URL: <code>{siteUrl}/privacy</code></div>
+                {!dashboardUrlSet && <div className="muted" style={{ marginTop: 4 }}>Set “Dashboard public URL” below so these use your real domain.</div>}
               </details>
             </div>
           );

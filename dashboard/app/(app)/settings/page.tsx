@@ -58,6 +58,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           },
         ]}
         dashboardUrlSet={!!cfg.DASHBOARD_URL}
+        siteUrl={(cfg.DASHBOARD_URL ?? "").replace(/\/$/, "")}
       />
       {!encKey() && <div className="msg bad" style={{ marginBottom: 16 }}>SETTINGS_ENCRYPTION_KEY isn't set on the dashboard server, so API keys can't be saved here yet. Non-secret settings still work.</div>}
       <SettingsForm fields={fields} integrations={integrations} canSaveSecrets={!!encKey()} />

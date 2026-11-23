@@ -83,6 +83,8 @@ One-time setup per platform:
 
 Set *Dashboard public URL* first, because the redirect URI must match exactly.
 
+Both portals ask for a **Terms of Service** and a **Privacy Policy** URL. The dashboard serves public ones at `https://<dashboard>/terms` and `https://<dashboard>/privacy`. Set *Operator name* and *Contact email* in Settings → App so they show your details. These are templates for a self-operated tool, not legal advice; if your app already publishes its own policies, use those URLs instead.
+
 ## Stages (run by GitHub Actions)
 
 | Stage | Schedule | What it does |

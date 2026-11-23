@@ -12,5 +12,5 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   // Public: login, link-in-bio redirect, static assets.
-  matcher: ["/((?!login|go|_next/static|_next/image|favicon.ico|demo/).*)"],
+  matcher: ["/((?!login|go|terms|privacy|_next/static|_next/image|favicon.ico|demo/).*)"],
 };

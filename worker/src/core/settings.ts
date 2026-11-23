@@ -22,6 +22,8 @@ export const SETTINGS: SettingDef[] = [
   { key: "APP_DESCRIPTION", label: "What the app does", group: "App", type: "textarea", help: "One or two sentences. Scripts only claim what's written here." },
   { key: "APP_LANDING_URL", label: "Download link", group: "App", help: "Smart link that routes to App Store / Play (Branch, AppsFlyer OneLink, or your own)." },
   { key: "DASHBOARD_URL", label: "Dashboard public URL", group: "App", placeholder: "https://studyshorts.yourdomain.com", help: "Put <this URL>/go?p=tiktok in your TikTok bio (and ?p=instagram on IG). It always redirects to the newest video's tracked link and counts clicks." },
+  { key: "LEGAL_ENTITY_NAME", label: "Operator name (legal pages)", group: "App", placeholder: "Your name or company", help: "Shown on your public /terms and /privacy pages. Defaults to the app name." },
+  { key: "CONTACT_EMAIL", label: "Contact email (legal pages)", group: "App", placeholder: "support@yourapp.com", help: "Where people send privacy or data-deletion requests. Shown publicly on /terms and /privacy." },
   { key: "BRAND_COLORS", label: "Brand colours", group: "App", placeholder: "#0f172a,#4c1d95,#facc15", help: "background, background 2, accent. Leave empty to let each script choose." },
   { key: "NICHE_HASHTAGS", label: "Niche hashtags", group: "Research", placeholder: "studytok,studywithme,studytips" },
   { key: "COMPETITOR_ACCOUNTS", label: "Competitor accounts", group: "Research", placeholder: "handle1,handle2" },

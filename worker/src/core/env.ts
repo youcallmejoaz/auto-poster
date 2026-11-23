@@ -10,6 +10,8 @@ const Env = z.object({
   COMPETITOR_ACCOUNTS: z.string().default(""), // comma-separated handles
   DASHBOARD_URL: z.string().optional(), // public URL of the dashboard; enables the /go link-in-bio
   BRAND_COLORS: z.string().default(""), // "bg,bg2,accent" hex
+  LEGAL_ENTITY_NAME: z.string().optional(), // shown on /terms and /privacy; defaults to APP_NAME
+  CONTACT_EMAIL: z.string().optional(),
   SETTINGS_ENCRYPTION_KEY: z.string().optional(),
   GITHUB_REPO: z.string().optional(),
   GITHUB_TOKEN: z.string().optional(),
