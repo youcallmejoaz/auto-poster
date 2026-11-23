@@ -1,15 +1,17 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import type { Config } from "worker/env";
+import { ZernioClient, zernioAccountIssues } from "worker/zernio";
 
-export type IntegrationId = "anthropic" | "elevenlabs" | "apify" | "instagram" | "tiktok" | "github";
+export type IntegrationId = "anthropic" | "elevenlabs" | "apify" | "zernio" | "instagram" | "tiktok" | "github";
 
 export const INTEGRATIONS: { id: IntegrationId; label: string; needs: (keyof Config)[]; required?: boolean }[] = [
   { id: "anthropic", label: "Claude (scripts, critique, analytics)", needs: ["ANTHROPIC_API_KEY"], required: true },
   { id: "elevenlabs", label: "ElevenLabs voiceover", needs: ["ELEVENLABS_API_KEY"] },
   { id: "apify", label: "Apify research", needs: ["APIFY_TOKEN"] },
-  { id: "instagram", label: "Instagram Reels", needs: ["IG_USER_ID", "IG_ACCESS_TOKEN"] },
-  { id: "tiktok", label: "TikTok", needs: ["TIKTOK_ACCESS_TOKEN"] },
+  { id: "zernio", label: "Zernio (posts to TikTok + Instagram)", needs: ["ZERNIO_API_KEY"] },
+  { id: "instagram", label: "Instagram Reels (direct API)", needs: ["IG_USER_ID", "IG_ACCESS_TOKEN"] },
+  { id: "tiktok", label: "TikTok (direct API)", needs: ["TIKTOK_ACCESS_TOKEN"] },
   { id: "github", label: "GitHub Actions (Run buttons)", needs: ["GITHUB_REPO", "GITHUB_TOKEN"] },
 ];
 
@@ -36,6 +38,14 @@ export async function testIntegration(cfg: Config, id: IntegrationId): Promise<s
     case "apify": {
       const u = await get("https://api.apify.com/v2/users/me", { authorization: `Bearer ${cfg.APIFY_TOKEN}` });
       return `OK — ${u.data?.username ?? "account"}`;
+    }
+    case "zernio": {
+      const accounts = await new ZernioClient(cfg.ZERNIO_API_KEY!, cfg.ZERNIO_BASE_URL).listAccounts();
+      const mine = accounts.filter((a) => a.platform === "tiktok" || a.platform === "instagram");
+      const issues = zernioAccountIssues(accounts, cfg);
+      const list = mine.map((a) => `${a.platform} @${a.username ?? a._id}`).join(", ") || "no TikTok/Instagram accounts yet";
+      if (issues.length) throw new Error(`Key works (${list}). ${issues.join(" ")}`);
+      return `OK — ${list}`;
     }
     case "instagram": {
       const u = await get(`https://graph.facebook.com/${cfg.META_GRAPH_VERSION}/${cfg.IG_USER_ID}?fields=username&access_token=${encodeURIComponent(cfg.IG_ACCESS_TOKEN!)}`);

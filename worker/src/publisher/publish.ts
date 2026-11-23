@@ -20,11 +20,15 @@ async function localCopy(ctx: Ctx, v: Video): Promise<string> {
 }
 
 /** Posts approved videos to every configured platform, inside posting slots and under the daily cap. */
-export async function runPublish(ctx: Ctx, publishers: Publisher[], opts: { force?: boolean; now?: Date } = {}) {
+export type PublisherSource = Publisher[] | (() => Promise<Publisher[]>);
+export const resolvePublishers = async (p: PublisherSource) => (typeof p === "function" ? p() : p);
+
+export async function runPublish(ctx: Ctx, source: PublisherSource, opts: { force?: boolean; now?: Date } = {}) {
   return runStage(ctx, "publish", async () => {
     const now = opts.now ?? new Date();
-    if (!publishers.length) return { items: 0, reason: "no platforms configured" };
     if (!opts.force && !inPostingSlot(now, ctx.cfg.POST_SLOTS_UTC)) return { items: 0, reason: "outside posting slot" };
+    const publishers = await resolvePublishers(source);
+    if (!publishers.length) return { items: 0, reason: "no platforms configured" };
 
     const today = (await ctx.repo.postsSince(1)).filter((p) => p.posted_at!.slice(0, 10) === now.toISOString().slice(0, 10));
     const postedVideosToday = new Set(today.map((p) => p.video_id)).size;
@@ -43,7 +47,7 @@ export async function runPublish(ctx: Ctx, publishers: Publisher[], opts: { forc
           const file = await localCopy(ctx, v);
           const mediaUrl = await ctx.repo.signedVideoUrl(v.storage_path!, 3600);
           const caption = buildCaption(v.caption, v.hashtags);
-          const externalId = await pub.publish({ mediaUrl, localFile: file, caption, title: caption });
+          const externalId = await pub.publish({ mediaUrl, localFile: file, caption, title: caption, videoId: v.id });
           await ctx.repo.insertPost({ video_id: v.id!, platform: pub.platform, external_id: externalId, tracked_link: link, posted_at: new Date().toISOString() });
           posted++;
         } catch (e) {

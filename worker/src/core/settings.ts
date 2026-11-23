@@ -8,7 +8,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 export interface SettingDef {
   key: string;
   label: string;
-  group: "App" | "AI" | "Voice" | "Research" | "Instagram" | "TikTok" | "Publishing" | "Ops" | "Automation";
+  group: "App" | "AI" | "Voice" | "Research" | "Zernio" | "Instagram" | "TikTok" | "Publishing" | "Ops" | "Automation";
   secret?: boolean;
   help?: string;
   type?: "text" | "textarea" | "number" | "bool";
@@ -33,6 +33,9 @@ export const SETTINGS: SettingDef[] = [
   { key: "LLM_MODEL_JUDGE", label: "Judge / strategy model", group: "AI", placeholder: "claude-opus-5-5" },
   { key: "ELEVENLABS_API_KEY", label: "ElevenLabs API key", group: "Voice", secret: true, help: "Optional. Without it videos have no voiceover or captions." },
   { key: "ELEVENLABS_VOICE_ID", label: "Voice ID", group: "Voice", placeholder: "21m00Tcm4TlvDq8ikWAM" },
+  { key: "ZERNIO_API_KEY", label: "Zernio API key", group: "Zernio", secret: true, help: "zernio.com → Settings → API keys. With this set, videos are posted through Zernio and the Instagram/TikTok developer apps below are not needed." },
+  { key: "ZERNIO_TIKTOK_ACCOUNT_ID", label: "TikTok account ID (optional)", group: "Zernio", help: "Leave empty to use the TikTok account connected in Zernio. Only needed if you connected more than one." },
+  { key: "ZERNIO_INSTAGRAM_ACCOUNT_ID", label: "Instagram account ID (optional)", group: "Zernio", help: "Leave empty to use the Instagram account connected in Zernio. Only needed if you connected more than one." },
   { key: "IG_APP_ID", label: "Instagram app ID", group: "Instagram", help: "Meta developer dashboard → your app → Instagram → API setup with Instagram login. Enables the Connect button and auto-refresh." },
   { key: "IG_APP_SECRET", label: "Instagram app secret", group: "Instagram", secret: true },
   { key: "IG_USER_ID", label: "Instagram account ID", group: "Instagram", help: "Filled in automatically when you use Connect." },
@@ -47,7 +50,9 @@ export const SETTINGS: SettingDef[] = [
   { key: "TIKTOK_REFRESH_TOKEN", label: "TikTok refresh token", group: "TikTok", secret: true, help: "Filled in by Connect (valid 365 days, renewed on each refresh)." },
   { key: "TIKTOK_TOKEN_EXPIRES_AT", label: "TikTok token expiry", group: "TikTok", internal: true },
   { key: "TIKTOK_REFRESH_EXPIRES_AT", label: "TikTok refresh token expiry", group: "TikTok", internal: true },
-  { key: "TIKTOK_PRIVACY", label: "TikTok privacy", group: "TikTok", placeholder: "SELF_ONLY", help: "Keep SELF_ONLY until TikTok approves your app audit, then PUBLIC_TO_EVERYONE." },
+  { key: "TIKTOK_PRIVACY", label: "TikTok privacy", group: "TikTok", placeholder: "SELF_ONLY", help: "Leave empty: public via Zernio, private (SELF_ONLY) via an unaudited direct app." },
+  { key: "POST_PLATFORMS", label: "Post to", group: "Publishing", placeholder: "tiktok,instagram", help: "Comma-separated: tiktok, instagram." },
+  { key: "AI_DISCLOSURE", label: "Label posts as AI-generated", group: "Publishing", type: "bool", help: "Recommended: sets TikTok's and Instagram's AI-generated content labels. Both platforms require disclosure of realistic AI media." },
   { key: "POST_SLOTS_UTC", label: "Posting times (UTC)", group: "Publishing", placeholder: "15:00,20:00" },
   { key: "DAILY_POST_CAP", label: "Max videos per day", group: "Publishing", type: "number", placeholder: "2" },
   { key: "AUTO_APPROVE", label: "Auto-approve videos that pass the quality bar", group: "Publishing", type: "bool" },

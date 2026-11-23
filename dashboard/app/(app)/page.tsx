@@ -30,7 +30,7 @@ export default async function Overview() {
     { done: isConfigured(cfg, "anthropic"), text: "Add your Anthropic API key", href: "/settings" },
     { done: cfg.APP_DESCRIPTION !== "AI study app that turns notes into flashcards and quizzes", text: "Describe your app (scripts only claim what you write)", href: "/settings" },
     { done: assets.some((a) => a.kind === "app_demo"), text: "Upload an app screen recording (unlocks the App demo template)", href: "/assets" },
-    { done: isConfigured(cfg, "instagram") || isConfigured(cfg, "tiktok"), text: "Connect Instagram and/or TikTok", href: "/settings" },
+    { done: isConfigured(cfg, "zernio") || isConfigured(cfg, "instagram") || isConfigured(cfg, "tiktok"), text: "Add your Zernio API key (connect TikTok + Instagram at zernio.com)", href: "/settings" },
     { done: !!cfg.DASHBOARD_URL, text: "Set the dashboard URL and put /go in your bio for install tracking", href: "/settings" },
     { done: isConfigured(cfg, "github"), text: "Connect GitHub so the Run buttons work", href: "/settings" },
   ];

@@ -44,7 +44,7 @@ export default async function PrivacyPage() {
 
       <h2>5. Service providers</h2>
       <p>
-        We use Supabase (database and file storage), Netlify (hosting), GitHub (scheduled jobs), Anthropic (AI used to write and review scripts; it receives
+        We use Zernio (publishes approved videos to TikTok and Instagram and returns their statistics), Supabase (database and file storage), Netlify (hosting), GitHub (scheduled jobs), Anthropic (AI used to write and review scripts; it receives
         video scripts and aggregated post statistics, not account tokens) and ElevenLabs (voice generation; it receives script text only).
       </p>
 

@@ -13,14 +13,15 @@ const GROUP_HELP: Record<string, string> = {
   AI: "Claude writes scripts (script model) and judges, researches and analyses (judge model).",
   Voice: "Voiceover plus word-by-word captions.",
   Research: "Where trend research comes from.",
-  Instagram: "Reels publishing and insights via the official Graph API.",
-  TikTok: "Content Posting API. Apply for TikTok's app audit early, because it takes weeks.",
+  Zernio: "Recommended. Posts to TikTok and Instagram through Zernio's approved apps: no developer apps, domain or TikTok audit needed. Connect your accounts at zernio.com.",
+  Instagram: "Advanced, not needed with Zernio. Direct Graph API connection with your own Meta app.",
+  TikTok: "Advanced, not needed with Zernio. Direct Content Posting API with your own TikTok app (requires TikTok's audit for public posts).",
   Publishing: "When and how much to post.",
   Ops: "Quality bar, volume and spend limits.",
   Automation: "Lets the Run buttons trigger the GitHub Actions workflow.",
 };
 
-const TESTABLE: Record<string, IntegrationId> = { AI: "anthropic", Voice: "elevenlabs", Research: "apify", Instagram: "instagram", TikTok: "tiktok", Automation: "github" };
+const TESTABLE: Record<string, IntegrationId> = { AI: "anthropic", Voice: "elevenlabs", Research: "apify", Zernio: "zernio", Instagram: "instagram", TikTok: "tiktok", Automation: "github" };
 
 export function SettingsForm({ fields, integrations, canSaveSecrets }: { fields: FieldView[]; integrations: { id: IntegrationId; label: string; configured: boolean }[]; canSaveSecrets: boolean }) {
   const [state, action, pending] = useActionState(saveSettings, null);

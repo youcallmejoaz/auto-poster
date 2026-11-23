@@ -60,12 +60,24 @@ cd dashboard && DEMO_MODE=true pnpm dev   # http://localhost:3000, sample data
 | Supabase project | database + video/media storage | free tier is fine to start |
 | ElevenLabs key | voiceover + word-by-word captions | optional |
 | Apify token | trend research | optional; you can import a CSV with the CLI instead |
-| IG Business/Creator account + Meta app (Instagram login) | Reels publishing + insights | connect once; refreshed automatically |
-| TikTok developer app | posting + stats | connect once; refreshed automatically. **Apply for the audit now (takes weeks)**; until then posts are private |
+| Zernio account (zernio.com) with TikTok + Instagram connected | posting + stats | recommended; one API key, no developer apps |
 | Branch/AppsFlyer/App Store campaign links | installs per video | use it as *Download link* and import installs on Analytics |
 | App screen recordings | the App demo template | vertical, 10–40s, no personal data on screen |
 
-## Connecting TikTok and Instagram (tokens refresh automatically)
+## Posting to TikTok and Instagram with Zernio (recommended)
+
+[Zernio](https://zernio.com) posts through its own approved TikTok and Instagram apps, so you don't need developer apps, a custom domain or TikTok's audit, and posts are public from day one.
+
+1. Sign up at zernio.com and connect your **TikTok** and **Instagram** (Business/Creator) accounts there.
+2. In Zernio, create an **API key** (Settings → API keys).
+3. Dashboard → **Settings → Zernio** → paste the key → **Save** → **Test connection**. The "Posting via Zernio" panel lists the accounts it will post to.
+4. Optional: **Settings → Publishing → Post to** (`tiktok,instagram`), and the AI-content label toggle (on by default).
+
+How it works: the publish stage uploads each approved video once to Zernio (presigned upload), creates one post per platform (TikTok with the required consent flags and AI disclosure, Instagram as a Reel shared to feed), waits for the platform to confirm, and stores the Zernio post id. The analytics stage reads views, likes, comments, shares, saves and watch time from Zernio's metrics API. Retries are safe: each post carries an idempotency key, and Zernio's 24h duplicate check returns the original post. The supervisor alerts if an account is missing or needs reconnecting.
+
+When a Zernio key is set it replaces the direct APIs below.
+
+## Direct TikTok / Instagram connection (advanced, not needed with Zernio)
 
 Use **Settings → Connected accounts → Connect** instead of pasting tokens. After that:
 

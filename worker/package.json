@@ -33,6 +33,7 @@
     "./csv": "./src/research/sources.ts",
     "./script": "./src/creator/script.ts",
     "./research": "./src/research/analyze.ts",
-    "./tokens": "./src/publisher/tokens.ts"
+    "./tokens": "./src/publisher/tokens.ts",
+    "./zernio": "./src/publisher/zernio.ts"
   }
 }

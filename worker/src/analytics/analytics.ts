@@ -4,6 +4,7 @@ import { TEMPLATE_IDS } from "renderer/schema";
 import { ask, runStage, type Ctx } from "../core/context";
 import type { Brief, MetricSnapshot, Post, Video } from "../core/types";
 import type { Publisher } from "../publisher/platforms";
+import { resolvePublishers, type PublisherSource } from "../publisher/publish";
 
 /** Installs per tracked link, from your attribution tool's export: { "<utm_content code>": { clicks, installs } }. */
 export interface Attribution {
@@ -131,9 +132,9 @@ const FeedbackOut = z.object({
 
 const MAX_OPEN_BRIEFS = 15;
 
-export async function runAnalytics(ctx: Ctx, publishers: Publisher[], attribution: Attribution) {
+export async function runAnalytics(ctx: Ctx, source: PublisherSource, attribution: Attribution) {
   return runStage(ctx, "analytics", async () => {
-    const snaps = await collectMetrics(ctx, publishers, attribution);
+    const snaps = await collectMetrics(ctx, await resolvePublishers(source), attribution);
     const posts = await ctx.repo.postsSince(30);
     const latest = await ctx.repo.latestMetrics(posts.map((p) => p.id!));
     const byVideo = new Map<string, { posts: Post[]; metrics: MetricSnapshot[] }>();

@@ -14,7 +14,7 @@ export interface PlatformStats {
 export interface Publisher {
   platform: Platform;
   /** mediaUrl: short-lived public URL; localFile: same video on disk. Returns the platform media id. */
-  publish(input: { mediaUrl: string; localFile: string; caption: string; title: string }): Promise<string>;
+  publish(input: { mediaUrl: string; localFile: string; caption: string; title: string; videoId?: string }): Promise<string>;
   stats(externalIds: string[]): Promise<Map<string, PlatformStats>>;
 }
 

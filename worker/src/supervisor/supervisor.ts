@@ -1,5 +1,6 @@
 import { http, runStage, type Ctx } from "../core/context";
 import { tokenWarnings } from "../publisher/tokens";
+import { ZernioClient, zernioAccountIssues } from "../publisher/zernio";
 import type { JobRun, Video } from "../core/types";
 
 /** Max hours between successful runs before the stage counts as stalled. */
@@ -67,6 +68,14 @@ export async function runSupervisor(ctx: Ctx, rerun: (stage: string) => Promise<
     const { issues, retry, spend24h } = checkHealth({ runs, reviewQueue, recentVideos: recent, dailyBudgetUsd: ctx.cfg.DAILY_BUDGET_USD });
 
     issues.push(...tokenWarnings(ctx.cfg));
+    if (ctx.cfg.ZERNIO_API_KEY && !ctx.dryRun) {
+      try {
+        const accounts = await new ZernioClient(ctx.cfg.ZERNIO_API_KEY, ctx.cfg.ZERNIO_BASE_URL).listAccounts();
+        for (const m of zernioAccountIssues(accounts, ctx.cfg)) issues.push({ severity: "critical", message: m });
+      } catch (e) {
+        issues.push({ severity: "critical", message: `Can't reach Zernio: ${(e as Error).message}` });
+      }
+    }
     const budgetBlown = issues.some((i) => i.message.includes("exceeds budget"));
     for (const s of retry) {
       if (budgetBlown) break; // never retry into a blown budget

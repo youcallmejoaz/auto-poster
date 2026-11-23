@@ -49,8 +49,19 @@ const Env = z.object({
   TIKTOK_REFRESH_TOKEN: z.string().optional(),
   TIKTOK_TOKEN_EXPIRES_AT: z.string().optional(),
   TIKTOK_REFRESH_EXPIRES_AT: z.string().optional(),
-  /** Unaudited TikTok apps can only post SELF_ONLY. Switch to PUBLIC_TO_EVERYONE after audit. */
-  TIKTOK_PRIVACY: z.string().default("SELF_ONLY"),
+  /** Unset = PUBLIC_TO_EVERYONE via Zernio, SELF_ONLY via an unaudited direct TikTok app. */
+  TIKTOK_PRIVACY: z.string().optional(),
+
+  /** Zernio (zernio.com) posts to TikTok/Instagram through its own approved apps. When set, it replaces the direct APIs. */
+  ZERNIO_API_KEY: z.string().optional(),
+  ZERNIO_BASE_URL: z.string().default("https://zernio.com/api/v1"),
+  /** Optional: pin which connected Zernio account to use (needed only if several of a platform are connected). */
+  ZERNIO_TIKTOK_ACCOUNT_ID: z.string().optional(),
+  ZERNIO_INSTAGRAM_ACCOUNT_ID: z.string().optional(),
+  /** Which platforms to post to: "tiktok,instagram". */
+  POST_PLATFORMS: z.string().default("tiktok,instagram"),
+  /** Label posts as AI-generated (TikTok videoMadeWithAi, Instagram isAiGenerated). */
+  AI_DISCLOSURE: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
 
   /** JSON file mapping tracked link -> installs, exported from your attribution tool. */
   INSTALLS_FILE: z.string().optional(),
