@@ -58,6 +58,8 @@ const Env = z.object({
   /** Optional: pin which connected Zernio account to use (needed only if several of a platform are connected). */
   ZERNIO_TIKTOK_ACCOUNT_ID: z.string().optional(),
   ZERNIO_INSTAGRAM_ACCOUNT_ID: z.string().optional(),
+  /** TikTok requires disclosing content that promotes your own business: "brand_organic" ("Your Brand"). */
+  TIKTOK_COMMERCIAL_DISCLOSURE: z.enum(["brand_organic", "none"]).default("brand_organic"),
   /** Which platforms to post to: "tiktok,instagram". */
   POST_PLATFORMS: z.string().default("tiktok,instagram"),
   /** Label posts as AI-generated (TikTok videoMadeWithAi, Instagram isAiGenerated). */

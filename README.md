@@ -71,7 +71,9 @@ cd dashboard && DEMO_MODE=true pnpm dev   # http://localhost:3000, sample data
 1. Sign up at zernio.com and connect your **TikTok** and **Instagram** (Business/Creator) accounts there.
 2. In Zernio, create an **API key** (Settings → API keys).
 3. Dashboard → **Settings → Zernio** → paste the key → **Save** → **Test connection**. The "Posting via Zernio" panel lists the accounts it will post to.
-4. Optional: **Settings → Publishing → Post to** (`tiktok,instagram`), and the AI-content label toggle (on by default).
+4. Optional: **Settings → Publishing → Post to** (`tiktok,instagram`), the AI-content label toggle (on by default), and **TikTok commercial disclosure** (default `brand_organic`, TikTok's "Your Brand" label, which TikTok requires when a video promotes your own app).
+
+Before each TikTok post the pipeline reads TikTok's creator info for the account (via Zernio) and follows it: only allowed privacy levels, Duet/Stitch only where TikTok enables them (business accounts usually can't), and a clear stop if the daily posting limit is reached.
 
 How it works: the publish stage uploads each approved video once to Zernio (presigned upload), creates one post per platform (TikTok with the required consent flags and AI disclosure, Instagram as a Reel shared to feed), waits for the platform to confirm, and stores the Zernio post id. The analytics stage reads views, likes, comments, shares, saves and watch time from Zernio's metrics API. Retries are safe: each post carries an idempotency key, and Zernio's 24h duplicate check returns the original post. The supervisor alerts if an account is missing or needs reconnecting.
 

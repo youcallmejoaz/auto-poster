@@ -8,7 +8,7 @@ import { ZernioClient, ZernioPublisher, pickAccount, zernioAccountIssues, zernio
 type Call = { method: string; url: string; headers: Record<string, string>; body: any };
 
 /** Simulated Zernio API, shaped after zernio.com/openapi.yaml. */
-function fakeZernio(opts: { accounts?: ZernioAccount[]; finalStatus?: string[]; conflict?: boolean; metrics?: any[] } = {}) {
+function fakeZernio(opts: { accounts?: ZernioAccount[]; finalStatus?: string[]; conflict?: boolean; metrics?: any[]; creatorInfo?: any } = {}) {
   const calls: Call[] = [];
   let polls = 0;
   const statuses = opts.finalStatus ?? ["publishing", "published"];
@@ -21,6 +21,8 @@ function fakeZernio(opts: { accounts?: ZernioAccount[]; finalStatus?: string[]; 
     if (url.startsWith("https://upload.example/")) return new Response(null, { status: 200 });
     if (headers.authorization !== "Bearer sk_test") return json(401, { error: "Unauthorized" });
     if (url.endsWith("/accounts")) return json(200, { accounts: opts.accounts ?? [], hasAnalyticsAccess: true });
+    if (url.endsWith("/tiktok/creator-info"))
+      return json(200, opts.creatorInfo ?? { creator: { canPostMore: true }, privacyLevels: [{ value: "PUBLIC_TO_EVERYONE" }], postingLimits: { interactionSettings: { allow_comment: { enabled: true }, allow_duet: { enabled: false }, allow_stitch: { enabled: false } } }, commercialContentTypes: [{ value: "none" }, { value: "brand_organic" }, { value: "brand_content" }] });
     if (url.endsWith("/media/presign")) return json(200, { uploadUrl: "https://upload.example/abc", publicUrl: "https://media.zernio.com/abc.mp4", expiresIn: 3600 });
     if (url.endsWith("/posts") && init.method === "POST") {
       if (opts.conflict) return json(409, { error: "Duplicate content", existingPostId: "p_existing" });
@@ -77,7 +79,8 @@ describe("Zernio publisher", () => {
       mediaItems: [{ type: "video", url: "https://media.zernio.com/abc.mp4" }],
       platforms: [{ platform: "tiktok", accountId: "acc_tt" }],
       externalId: "v1",
-      tiktokSettings: { privacyLevel: "PUBLIC_TO_EVERYONE", contentPreviewConfirmed: true, expressConsentGiven: true, videoMadeWithAi: true, allowDuet: true, allowStitch: true },
+      // Duet/Stitch follow TikTok's creator info (disabled on this account); own-app promotion is disclosed as "Your Brand".
+      tiktokSettings: { privacyLevel: "PUBLIC_TO_EVERYONE", contentPreviewConfirmed: true, expressConsentGiven: true, videoMadeWithAi: true, allowComment: true, allowDuet: false, allowStitch: false, commercialContentType: "brand_organic" },
     });
     expect(Date.parse(create.body.scheduledFor)).toBeGreaterThan(Date.now());
     expect(create.body.publishNow).toBeUndefined();
@@ -145,5 +148,23 @@ describe("account selection + health", () => {
     const cfg = loadConfig({ ZERNIO_API_KEY: "k" } as any);
     expect(zernioAccountIssues([], cfg)).toEqual([expect.stringMatching(/No TikTok account/), expect.stringMatching(/No Instagram account/)]);
     expect(zernioAccountIssues([tt, { ...ig, needsReconnect: true }], cfg)).toEqual([expect.stringMatching(/instagram account @studyapp.ig needs reconnecting/)]);
+  });
+});
+
+describe("TikTok creator-info checks", () => {
+  const base = { privacy: "PUBLIC_TO_EVERYONE", aiDisclosure: true } as const;
+  it("refuses a privacy level TikTok doesn't offer, with the allowed list", () => {
+    expect(() => ZernioPublisher.tiktokSettingsFor({ privacyLevels: [{ value: "PUBLIC_TO_EVERYONE" }] }, { ...base, privacy: "SELF_ONLY" })).toThrow(/allowed: PUBLIC_TO_EVERYONE/);
+  });
+  it("stops when TikTok's daily limit is reached", () => {
+    expect(() => ZernioPublisher.tiktokSettingsFor({ creator: { canPostMore: false } }, base)).toThrow(/daily posting limit/);
+  });
+  it("enables duet/stitch only where TikTok allows them, and honours disclosure = none", () => {
+    expect(ZernioPublisher.tiktokSettingsFor({ postingLimits: { interactionSettings: { allow_comment: { enabled: true }, allow_duet: { enabled: true }, allow_stitch: { enabled: false } } } }, { ...base, tiktokCommercial: "none" })).toEqual({ allowComment: true, allowDuet: true, allowStitch: false, commercialContentType: "none" });
+  });
+  it("is fetched for the right account before posting", async () => {
+    const { f, calls } = fakeZernio();
+    await new ZernioPublisher("tiktok", new ZernioClient("sk_test", undefined, f, 0), tt, base).publish({ localFile: tmpVideo(), caption: "c", videoId: "v9" } as any);
+    expect(calls.some((c) => c.url.endsWith("/accounts/acc_tt/tiktok/creator-info"))).toBe(true);
   });
 });

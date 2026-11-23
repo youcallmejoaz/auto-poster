@@ -53,6 +53,7 @@ export const SETTINGS: SettingDef[] = [
   { key: "TIKTOK_PRIVACY", label: "TikTok privacy", group: "TikTok", placeholder: "SELF_ONLY", help: "Leave empty: public via Zernio, private (SELF_ONLY) via an unaudited direct app." },
   { key: "POST_PLATFORMS", label: "Post to", group: "Publishing", placeholder: "tiktok,instagram", help: "Comma-separated: tiktok, instagram." },
   { key: "AI_DISCLOSURE", label: "Label posts as AI-generated", group: "Publishing", type: "bool", help: "Recommended: sets TikTok's and Instagram's AI-generated content labels. Both platforms require disclosure of realistic AI media." },
+  { key: "TIKTOK_COMMERCIAL_DISCLOSURE", label: "TikTok commercial disclosure", group: "Publishing", placeholder: "brand_organic", help: "brand_organic = TikTok's \"Your Brand\" label, required by TikTok when a video promotes your own app/business. Use \"none\" only for purely non-promotional videos." },
   { key: "POST_SLOTS_UTC", label: "Posting times (UTC)", group: "Publishing", placeholder: "15:00,20:00" },
   { key: "DAILY_POST_CAP", label: "Max videos per day", group: "Publishing", type: "number", placeholder: "2" },
   { key: "AUTO_APPROVE", label: "Auto-approve videos that pass the quality bar", group: "Publishing", type: "bool" },

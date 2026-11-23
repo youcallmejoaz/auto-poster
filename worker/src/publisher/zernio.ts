@@ -39,6 +39,17 @@ export interface ZernioPost {
   platforms: ZernioPlatformTarget[];
 }
 
+/** GET /accounts/{id}/tiktok/creator-info: what TikTok allows for this account right now. */
+export interface TikTokCreatorInfo {
+  creator?: { nickname?: string; canPostMore?: boolean };
+  privacyLevels?: { value: string; label?: string }[];
+  postingLimits?: {
+    maxVideoDurationSec?: number;
+    interactionSettings?: Record<"allow_comment" | "allow_duet" | "allow_stitch", { enabled?: boolean; required?: boolean; default?: boolean } | undefined>;
+  };
+  commercialContentTypes?: { value: string }[];
+}
+
 export class ZernioError extends Error {
   constructor(message: string, public status: number, public body: any) {
     super(message);
@@ -72,6 +83,10 @@ export class ZernioClient {
   async listAccounts(): Promise<ZernioAccount[]> {
     const r = await this.req<{ accounts: ZernioAccount[] }>("GET", "/accounts");
     return r.accounts ?? [];
+  }
+
+  async tiktokCreatorInfo(accountId: string): Promise<TikTokCreatorInfo> {
+    return this.req<TikTokCreatorInfo>("GET", `/accounts/${encodeURIComponent(accountId)}/tiktok/creator-info`);
   }
 
   /** Presigned upload: POST /media/presign, PUT the bytes, use publicUrl in posts. */
@@ -149,6 +164,8 @@ export function pickAccount(accounts: ZernioAccount[], platform: Platform, pinne
 export interface ZernioPublishOptions {
   privacy: string;
   aiDisclosure: boolean;
+  /** TikTok commercial content disclosure: "brand_organic" (promoting your own app/business) or "none". */
+  tiktokCommercial?: "none" | "brand_organic";
   /** How long to wait for the platform to confirm publishing (TikTok can take a few minutes). */
   waitMs?: number;
 }
@@ -157,7 +174,28 @@ export interface ZernioPublishOptions {
 export class ZernioPublisher implements Publisher {
   constructor(public platform: Platform, private client: ZernioClient, private account: ZernioAccount, private opts: ZernioPublishOptions) {}
 
-  buildBody(mediaUrl: string, caption: string, videoId: string) {
+  /**
+   * Checks the post against what TikTok allows for this account (privacy levels, duet/stitch,
+   * daily limit) and returns the interaction flags to send. Throws a clear error otherwise.
+   */
+  static tiktokSettingsFor(info: TikTokCreatorInfo, opts: ZernioPublishOptions) {
+    if (info.creator?.canPostMore === false) throw new Error("TikTok says this account can't post more right now (daily posting limit). It will retry at the next posting slot.");
+    const levels = (info.privacyLevels ?? []).map((l) => l.value);
+    if (levels.length && !levels.includes(opts.privacy)) throw new Error(`TikTok privacy "${opts.privacy}" isn't allowed for this account; allowed: ${levels.join(", ")}. Change "TikTok privacy" in Settings.`);
+    const allowed = (k: "allow_comment" | "allow_duet" | "allow_stitch") => info.postingLimits?.interactionSettings?.[k]?.enabled !== false;
+    const commercial = opts.tiktokCommercial ?? "brand_organic";
+    const types = (info.commercialContentTypes ?? []).map((t) => t.value);
+    if (types.length && !types.includes(commercial)) throw new Error(`TikTok commercial disclosure "${commercial}" isn't available for this account; allowed: ${types.join(", ")}.`);
+    return {
+      allowComment: allowed("allow_comment"),
+      // Duet/Stitch are switched off by TikTok on some (e.g. business) accounts; asking for them is rejected.
+      allowDuet: allowed("allow_duet"),
+      allowStitch: allowed("allow_stitch"),
+      commercialContentType: commercial,
+    };
+  }
+
+  buildBody(mediaUrl: string, caption: string, videoId: string, tiktok?: ReturnType<typeof ZernioPublisher.tiktokSettingsFor>) {
     const target: Record<string, unknown> = { platform: this.platform, accountId: this.account._id };
     if (this.platform === "instagram") target.platformSpecificData = { shareToFeed: true, isAiGenerated: this.opts.aiDisclosure };
     const body: Record<string, unknown> = {
@@ -173,9 +211,10 @@ export class ZernioPublisher implements Publisher {
     if (this.platform === "tiktok") {
       body.tiktokSettings = {
         privacyLevel: this.opts.privacy,
-        allowComment: true,
-        allowDuet: true,
-        allowStitch: true,
+        allowComment: tiktok?.allowComment ?? true,
+        allowDuet: tiktok?.allowDuet ?? false,
+        allowStitch: tiktok?.allowStitch ?? false,
+        commercialContentType: tiktok?.commercialContentType ?? this.opts.tiktokCommercial ?? "brand_organic",
         // The video was reviewed and approved in the dashboard before reaching this point.
         contentPreviewConfirmed: true,
         expressConsentGiven: true,
@@ -188,7 +227,8 @@ export class ZernioPublisher implements Publisher {
   async publish(input: { localFile: string; caption: string; videoId?: string }) {
     const mediaUrl = await this.client.uploadVideo(input.localFile);
     const videoId = input.videoId ?? path.basename(input.localFile, ".mp4");
-    const post = await this.client.createPost(this.buildBody(mediaUrl, input.caption, videoId), `studyshorts:${videoId}:${this.platform}`);
+    const tiktok = this.platform === "tiktok" ? ZernioPublisher.tiktokSettingsFor(await this.client.tiktokCreatorInfo(this.account._id), this.opts) : undefined;
+    const post = await this.client.createPost(this.buildBody(mediaUrl, input.caption, videoId, tiktok), `studyshorts:${videoId}:${this.platform}`);
     const t = await this.client.waitForPlatform(post._id, this.platform, this.opts.waitMs ?? 8 * 60_000);
     if (t?.status === "failed" || t?.status === "cancelled") throw new Error(`Zernio ${this.platform} publish ${t.status}: ${t.errorMessage ?? "no reason given"}${t.errorCategory ? ` (${t.errorCategory})` : ""}`);
     return `${ZERNIO_PREFIX}${post._id}`;
@@ -221,7 +261,7 @@ export const postPlatforms = (cfg: Config): Platform[] =>
 /** Builds publishers for every platform in POST_PLATFORMS from the accounts connected in Zernio. */
 export async function zernioPublishers(cfg: Config, client = new ZernioClient(cfg.ZERNIO_API_KEY!, cfg.ZERNIO_BASE_URL)): Promise<ZernioPublisher[]> {
   const accounts = await client.listAccounts();
-  const opts = { privacy: cfg.TIKTOK_PRIVACY ?? "PUBLIC_TO_EVERYONE", aiDisclosure: cfg.AI_DISCLOSURE };
+  const opts = { privacy: cfg.TIKTOK_PRIVACY ?? "PUBLIC_TO_EVERYONE", aiDisclosure: cfg.AI_DISCLOSURE, tiktokCommercial: cfg.TIKTOK_COMMERCIAL_DISCLOSURE };
   return postPlatforms(cfg).map((p) => new ZernioPublisher(p, client, pickAccount(accounts, p, p === "tiktok" ? cfg.ZERNIO_TIKTOK_ACCOUNT_ID : cfg.ZERNIO_INSTAGRAM_ACCOUNT_ID), opts));
 }
 
