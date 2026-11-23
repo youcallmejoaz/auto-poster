@@ -1,0 +1,8 @@
+# Netlify deploys the dashboard (Next.js) from this monorepo.
+[build]
+  base = "dashboard"
+  command = "pnpm build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"

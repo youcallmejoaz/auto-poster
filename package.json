@@ -11,5 +11,6 @@
       "esbuild",
       "@remotion/compositor-linux-x64-gnu"
     ]
-  }
+  },
+  "packageManager": "pnpm@10.28.0"
 }
